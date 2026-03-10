@@ -1,6 +1,8 @@
 name: Sync Letterboxd watched films
 
 on:
+  push:
+    branches: [main]
   schedule:
     - cron: "0 6 * * 0"  # Sunday 6 AM UTC (Saturday 11 PM Mountain)
   workflow_dispatch:
