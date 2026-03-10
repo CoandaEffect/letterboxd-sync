@@ -12,7 +12,13 @@ USERNAME = os.environ.get("LETTERBOXD_USERNAME", "coanda_effect")
 OUTPUT_FILE = os.environ.get("OUTPUT_FILE", "letterboxd-watched.csv")
 BASE_URL = "https://letterboxd.com"
 REQUEST_DELAY = 0.4
-HEADERS = {"User-Agent": "letterboxd-sync/1.0 (GitHub Action; +https://github.com)"}
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+}
 
 
 def fetch(url):
