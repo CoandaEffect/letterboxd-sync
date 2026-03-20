@@ -15,6 +15,13 @@ FIELDNAMES = [
 ]
 
 
+def format_date(date_dict):
+    """Convert a {year, month, day} dict to YYYY-MM-DD string."""
+    if not date_dict or not date_dict.get("year"):
+        return ""
+    return f"{date_dict['year']}-{date_dict['month']:02d}-{date_dict['day']:02d}"
+
+
 def build_diary_lookup(diary_data):
     """Build a slug -> most-recent-diary-entry lookup dict."""
     diary_by_slug = {}
@@ -22,7 +29,9 @@ def build_diary_lookup(diary_data):
         slug = entry.get("slug", "")
         if not slug:
             continue
-        if slug not in diary_by_slug or entry.get("date", "") > diary_by_slug[slug].get("date", ""):
+        entry_date = format_date(entry.get("date", {}))
+        existing_date = format_date(diary_by_slug[slug].get("date", {})) if slug in diary_by_slug else ""
+        if entry_date > existing_date:
             diary_by_slug[slug] = entry
     return diary_by_slug
 
@@ -36,7 +45,7 @@ def main():
     print(f"  Found {len(movies)} films")
 
     try:
-        diary_data = user.get_diary(fetch_runtime=True)
+        diary_data = user.pages.diary.get_diary(fetch_runtime=True)
         diary_entries = diary_data if isinstance(diary_data, dict) else {}
         print(f"  Found {len(diary_entries.get('entries', {}))} diary entries")
     except Exception as e:
@@ -55,7 +64,7 @@ def main():
             "Year": info.get("year", ""),
             "Rating": rating if rating is not None else "",
             "Liked": "Yes" if info.get("liked") else "",
-            "Watch Date": diary.get("date", ""),
+            "Watch Date": format_date(diary.get("date", {})),
             "Runtime": diary.get("runtime") if diary.get("runtime") is not None else "",
             "Rewatched": "Yes" if actions.get("rewatched") else "",
             "Letterboxd URI": f"https://letterboxd.com/film/{slug}/",
