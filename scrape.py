@@ -3,8 +3,10 @@
 
 import csv
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from letterboxdpy.user import User
+from letterboxdpy.pages.user_diary import _get_runtime
 
 USERNAME = os.environ.get("LETTERBOXD_USERNAME", "coanda_effect")
 OUTPUT_FILE = os.environ.get("OUTPUT_FILE", "letterboxd-watched.csv")
@@ -54,18 +56,25 @@ def main():
 
     diary_by_slug = build_diary_lookup(diary_entries)
 
+    # Fetch runtime for all films (diary entries already have it)
+    slugs_needing_runtime = [s for s in movies if s not in diary_by_slug]
+    print(f"  Fetching runtime for {len(slugs_needing_runtime)} films without diary entries...")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        runtimes = dict(zip(slugs_needing_runtime, executor.map(_get_runtime, slugs_needing_runtime)))
+
     rows = []
     for slug, info in movies.items():
         diary = diary_by_slug.get(slug, {})
         actions = diary.get("actions", {})
         rating = info.get("rating")
+        runtime = diary.get("runtime") or runtimes.get(slug)
         rows.append({
             "Name": info["name"],
             "Year": info.get("year", ""),
             "Rating": rating if rating is not None else "",
             "Liked": "Yes" if info.get("liked") else "",
             "Watch Date": format_date(diary.get("date", {})),
-            "Runtime": diary.get("runtime") if diary.get("runtime") is not None else "",
+            "Runtime": runtime if runtime is not None else "",
             "Rewatched": "Yes" if actions.get("rewatched") else "",
             "Letterboxd URI": f"https://letterboxd.com/film/{slug}/",
         })
