@@ -15,11 +15,15 @@ FIELDNAMES = [
 ]
 
 
-def format_date(date_dict):
-    """Convert a {year, month, day} dict to YYYY-MM-DD string."""
-    if not date_dict or not date_dict.get("year"):
+def format_date(date_value):
+    """Convert a date value (dict or string) to YYYY-MM-DD string."""
+    if not date_value:
         return ""
-    return f"{date_dict['year']}-{date_dict['month']:02d}-{date_dict['day']:02d}"
+    if isinstance(date_value, str):
+        return date_value
+    if isinstance(date_value, dict) and date_value.get("year"):
+        return f"{date_value['year']}-{date_value['month']:02d}-{date_value['day']:02d}"
+    return ""
 
 
 def build_diary_lookup(diary_data):
