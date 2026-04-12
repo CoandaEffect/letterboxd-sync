@@ -3,6 +3,8 @@ Name,Year,Rating,Liked,Watch Date,Runtime,Rewatched,Letterboxd URI
 21 Jump Street,2012,4.0,,,,,https://letterboxd.com/film/21-jump-street/
 28 Days Later,2002,3.5,,,,,https://letterboxd.com/film/28-days-later/
 28 Years Later,2025,4.0,,2025-09-14T00:00:00.000000Z,115,,https://letterboxd.com/film/28-years-later/
+28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,109,,https://letterboxd.com/film/28-years-later-the-bone-temple/
+[REC],2007,3.5,,2026-04-08T00:00:00.000000Z,78,,https://letterboxd.com/film/rec/
 A House of Dynamite,2025,3.5,,,,,https://letterboxd.com/film/a-house-of-dynamite/
 A Nightmare on Elm Street 3: Dream Warriors,1987,3.5,,,,,https://letterboxd.com/film/a-nightmare-on-elm-street-3-dream-warriors/
 A Quiet Place,2018,4.5,,,,,https://letterboxd.com/film/a-quiet-place-2018/
@@ -103,8 +105,10 @@ Jurassic Park,1993,5.0,,,,,https://letterboxd.com/film/jurassic-park/
 Jurassic World Rebirth,2025,4.0,,,,,https://letterboxd.com/film/jurassic-world-rebirth/
 Keanu,2016,3.0,,,,,https://letterboxd.com/film/keanu/
 Kill Bill: Vol. 1,2003,3.0,,,,,https://letterboxd.com/film/kill-bill-vol-1/
+Kill List,2011,3.5,,2026-04-10T00:00:00.000000Z,95,,https://letterboxd.com/film/kill-list/
 Killers of the Flower Moon,2023,1.5,,,,,https://letterboxd.com/film/killers-of-the-flower-moon/
 Knives Out,2019,5.0,,,,,https://letterboxd.com/film/knives-out-2019/
+Lake Mungo,2008,3.0,,,,,https://letterboxd.com/film/lake-mungo/
 Late Night with the Devil,2023,4.0,,,,,https://letterboxd.com/film/late-night-with-the-devil/
 Law Abiding Citizen,2009,3.0,,,,,https://letterboxd.com/film/law-abiding-citizen/
 Let Me In,2010,3.5,,,,,https://letterboxd.com/film/let-me-in/
@@ -113,6 +117,7 @@ Longlegs,2024,2.0,,,,,https://letterboxd.com/film/longlegs/
 M3GAN,2022,3.0,,,,,https://letterboxd.com/film/m3gan/
 M3GAN 2.0,2025,1.5,,,,,https://letterboxd.com/film/m3gan-20/
 Mad Max: Fury Road,2015,5.0,,,,,https://letterboxd.com/film/mad-max-fury-road/
+Mandy,2018,1.0,,2026-04-10T00:00:00.000000Z,122,,https://letterboxd.com/film/mandy-2018/
 Maniac Cop,1988,1.5,,,,,https://letterboxd.com/film/maniac-cop/
 Marshmallow,2025,4.0,,,,,https://letterboxd.com/film/marshmallow-2025/
 Memento,2000,4.5,,,,,https://letterboxd.com/film/memento/
@@ -188,6 +193,7 @@ The Hateful Eight,2015,3.5,,,,,https://letterboxd.com/film/the-hateful-eight/
 The Hunt,2020,3.5,,,,,https://letterboxd.com/film/the-hunt-2020/
 The Last Voyage of the Demeter,2023,3.0,,,,,https://letterboxd.com/film/the-last-voyage-of-the-demeter/
 The Lost Boys,1987,3.5,,,,,https://letterboxd.com/film/the-lost-boys/
+The Loved Ones,2009,4.0,,2026-04-05T00:00:00.000000Z,84,,https://letterboxd.com/film/the-loved-ones/
 The Man Who Killed Hitler and Then the Bigfoot,2018,1.5,,2025-10-27T00:00:00.000000Z,96,,https://letterboxd.com/film/the-man-who-killed-hitler-and-then-the-bigfoot/
 The Marksman,2021,2.0,,2025-11-29T00:00:00.000000Z,108,,https://letterboxd.com/film/the-marksman-2021/
 The Martian,2015,5.0,,,,,https://letterboxd.com/film/the-martian/
