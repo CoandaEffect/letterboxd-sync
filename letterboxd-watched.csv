@@ -3,7 +3,7 @@ Name,Year,Rating,Liked,Watch Date,Runtime,Rewatched,Letterboxd URI
 21 Jump Street,2012,4.5,,2026-05-19T00:00:00.000000Z,109,Yes,https://letterboxd.com/film/21-jump-street/
 28 Days Later,2002,3.5,,,,,https://letterboxd.com/film/28-days-later/
 28 Years Later,2025,4.0,,2025-09-14T00:00:00.000000Z,115,,https://letterboxd.com/film/28-years-later/
-28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,109,,https://letterboxd.com/film/28-years-later-the-bone-temple/
+28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,,,https://letterboxd.com/film/28-years-later-the-bone-temple/
 [REC],2007,3.5,,2026-04-08T00:00:00.000000Z,78,,https://letterboxd.com/film/rec/
 A House of Dynamite,2025,3.5,,,,,https://letterboxd.com/film/a-house-of-dynamite/
 A Nightmare on Elm Street 3: Dream Warriors,1987,3.5,,,,,https://letterboxd.com/film/a-nightmare-on-elm-street-3-dream-warriors/
@@ -47,7 +47,7 @@ Christine,1983,3.5,,,,,https://letterboxd.com/film/christine-1983/
 Civil War,2024,4.0,,,,,https://letterboxd.com/film/civil-war-2024/
 Cocaine Bear,2023,4.5,,,,,https://letterboxd.com/film/cocaine-bear/
 Coherence,2013,4.0,,,,,https://letterboxd.com/film/coherence/
-Creep,2014,3.5,,2026-04-03T00:00:00.000000Z,82,,https://letterboxd.com/film/creep-2014/
+Creep,2014,3.5,,2026-04-03T00:00:00.000000Z,,,https://letterboxd.com/film/creep-2014/
 Cube,1997,2.0,,,,,https://letterboxd.com/film/cube/
 Cuckoo,2024,3.5,,,,,https://letterboxd.com/film/cuckoo-2024/
 Dagon,2001,3.0,,2026-04-13T00:00:00.000000Z,95,,https://letterboxd.com/film/dagon/
@@ -82,7 +82,7 @@ Get Out,2017,4.5,,,,,https://letterboxd.com/film/get-out-2017/
 Glass Onion,2022,3.5,,,,,https://letterboxd.com/film/glass-onion/
 Good Boy,2025,4.0,,,,,https://letterboxd.com/film/good-boy-2025/
 "Good Luck, Have Fun, Don't Die",2025,3.5,,2026-04-15T00:00:00.000000Z,134,,https://letterboxd.com/film/good-luck-have-fun-dont-die/
-Gremlins,1984,2.0,,2026-04-04T00:00:00.000000Z,106,,https://letterboxd.com/film/gremlins/
+Gremlins,1984,2.0,,2026-04-04T00:00:00.000000Z,,,https://letterboxd.com/film/gremlins/
 Guardians of the Galaxy,2014,3.5,,,,,https://letterboxd.com/film/guardians-of-the-galaxy/
 Guardians of the Galaxy Vol. 2,2017,1.0,,,,,https://letterboxd.com/film/guardians-of-the-galaxy-vol-2/
 Hannibal,2001,2.5,,,,,https://letterboxd.com/film/hannibal/
@@ -171,7 +171,7 @@ Shang-Chi and the Legend of the Ten Rings,2021,3.0,,,,,https://letterboxd.com/fi
 Shaun of the Dead,2004,4.5,,,,,https://letterboxd.com/film/shaun-of-the-dead/
 Sinners,2025,4.5,,,,,https://letterboxd.com/film/sinners-2025/
 Sisu,2022,5.0,,2026-05-11T00:00:00.000000Z,91,Yes,https://letterboxd.com/film/sisu-2022/
-Sisu: Road to Revenge,2025,4.5,,2026-05-02T00:00:00.000000Z,89,,https://letterboxd.com/film/sisu-road-to-revenge/
+Sisu: Road to Revenge,2025,4.5,,2026-05-02T00:00:00.000000Z,,,https://letterboxd.com/film/sisu-road-to-revenge/
 Spectral,2016,3.0,,,,,https://letterboxd.com/film/spectral/
 Spider-Man: Across the Spider-Verse,2023,4.0,,,,,https://letterboxd.com/film/spider-man-across-the-spider-verse/
 Spider-Man: Into the Spider-Verse,2018,4.0,,,,,https://letterboxd.com/film/spider-man-into-the-spider-verse/
@@ -204,7 +204,7 @@ The Exorcist,1973,4.0,,2026-03-27T00:00:00.000000Z,122,,https://letterboxd.com/f
 The Fall Guy,2024,2.5,,,,,https://letterboxd.com/film/the-fall-guy-2024/
 The Fifth Element,1997,3.5,,,,,https://letterboxd.com/film/the-fifth-element/
 The First Omen,2024,3.5,,2026-03-29T00:00:00.000000Z,119,,https://letterboxd.com/film/the-first-omen/
-The Fly,1986,4.0,,2026-03-25T00:00:00.000000Z,96,,https://letterboxd.com/film/the-fly-1986/
+The Fly,1986,4.0,,2026-03-25T00:00:00.000000Z,,,https://letterboxd.com/film/the-fly-1986/
 The Girl with All the Gifts,2016,4.0,,,,,https://letterboxd.com/film/the-girl-with-all-the-gifts/
 The Guest,2014,4.0,,,,,https://letterboxd.com/film/the-guest-2014/
 The Hateful Eight,2015,3.5,,,,,https://letterboxd.com/film/the-hateful-eight/
