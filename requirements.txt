@@ -1,1 +1,1 @@
-letterboxdpy
+letterboxdpy>=6.5.7
