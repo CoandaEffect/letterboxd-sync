@@ -1,87 +1,28 @@
 #!/usr/bin/env python3
-"""Scrape a Letterboxd user's watched films and output as CSV."""
+"""TEMPORARY diagnostic: probe Letterboxd reachability from this runner."""
 
-import csv
-import os
+from curl_cffi import requests
 
-from letterboxdpy.user import User
-
-USERNAME = os.environ.get("LETTERBOXD_USERNAME", "coanda_effect")
-OUTPUT_FILE = os.environ.get("OUTPUT_FILE", "letterboxd-watched.csv")
-
-FIELDNAMES = [
-    "Name", "Year", "Rating", "Liked",
-    "Watch Date", "Runtime", "Rewatched", "Letterboxd URI",
-]
-
-
-def format_date(date_value):
-    """Convert a date value (dict or string) to YYYY-MM-DD string."""
-    if not date_value:
-        return ""
-    if isinstance(date_value, str):
-        return date_value
-    if isinstance(date_value, dict) and date_value.get("year"):
-        return f"{date_value['year']}-{date_value['month']:02d}-{date_value['day']:02d}"
-    return ""
-
-
-def build_diary_lookup(diary_data):
-    """Build a slug -> most-recent-diary-entry lookup dict."""
-    diary_by_slug = {}
-    for entry in diary_data.get("entries", {}).values():
-        slug = entry.get("slug", "")
-        if not slug:
-            continue
-        entry_date = format_date(entry.get("date", {}))
-        existing_date = format_date(diary_by_slug[slug].get("date", {})) if slug in diary_by_slug else ""
-        if entry_date > existing_date:
-            diary_by_slug[slug] = entry
-    return diary_by_slug
+URLS = {
+    "rss": "https://letterboxd.com/coanda_effect/rss/",
+    "profile": "https://letterboxd.com/coanda_effect/",
+    "films": "https://letterboxd.com/coanda_effect/films/",
+}
 
 
 def main():
-    print(f"Scraping films for {USERNAME}...")
-
-    user = User(USERNAME)
-    films_data = user.get_films()
-    movies = films_data.get("movies", {})
-    print(f"  Found {len(movies)} films")
-
-    try:
-        diary_data = user.pages.diary.get_diary(fetch_runtime=True)
-        diary_entries = diary_data if isinstance(diary_data, dict) else {}
-        print(f"  Found {len(diary_entries.get('entries', {}))} diary entries")
-    except Exception as e:
-        print(f"  Warning: could not fetch diary: {e}")
-        diary_entries = {}
-
-    diary_by_slug = build_diary_lookup(diary_entries)
-
-    rows = []
-    for slug, info in movies.items():
-        diary = diary_by_slug.get(slug, {})
-        actions = diary.get("actions", {})
-        rating = info.get("rating")
-        rows.append({
-            "Name": info["name"],
-            "Year": info.get("year", ""),
-            "Rating": rating if rating is not None else "",
-            "Liked": "Yes" if info.get("liked") else "",
-            "Watch Date": format_date(diary.get("date", {})),
-            "Runtime": diary.get("runtime") if diary.get("runtime") is not None else "",
-            "Rewatched": "Yes" if actions.get("rewatched") else "",
-            "Letterboxd URI": f"https://letterboxd.com/film/{slug}/",
-        })
-
-    rows.sort(key=lambda r: r["Name"].lower())
-
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"Wrote {len(rows)} films to {OUTPUT_FILE}")
+    for profile in ["chrome", "safari", "firefox", "safari_ios"]:
+        for name, url in URLS.items():
+            try:
+                r = requests.get(url, impersonate=profile, timeout=20)
+                server = r.headers.get("server", "?")
+                mitigated = r.headers.get("cf-mitigated", "-")
+                print(
+                    f"{profile:12s} {name:8s} -> {r.status_code} "
+                    f"server={server} cf-mitigated={mitigated} len={len(r.content)}"
+                )
+            except Exception as e:
+                print(f"{profile:12s} {name:8s} -> EXC {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
