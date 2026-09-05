@@ -3,7 +3,7 @@ Name,Year,Rating,Liked,Watch Date,Runtime,Rewatched,Letterboxd URI
 21 Jump Street,2012,4.5,,2026-05-19T00:00:00.000000Z,109,Yes,https://letterboxd.com/film/21-jump-street/
 28 Days Later,2002,3.5,,,,,https://letterboxd.com/film/28-days-later/
 28 Years Later,2025,4.0,,2025-09-14T00:00:00.000000Z,115,,https://letterboxd.com/film/28-years-later/
-28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,109,,https://letterboxd.com/film/28-years-later-the-bone-temple/
+28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,,,https://letterboxd.com/film/28-years-later-the-bone-temple/
 [REC],2007,3.5,,2026-04-08T00:00:00.000000Z,78,,https://letterboxd.com/film/rec/
 A House of Dynamite,2025,3.5,,,,,https://letterboxd.com/film/a-house-of-dynamite/
 A Nightmare on Elm Street 3: Dream Warriors,1987,3.5,,,,,https://letterboxd.com/film/a-nightmare-on-elm-street-3-dream-warriors/
@@ -15,7 +15,7 @@ Anaconda,2025,2.5,,2026-03-29T00:00:00.000000Z,100,,https://letterboxd.com/film/
 Anatomy of a Fall,2023,4.0,,,,,https://letterboxd.com/film/anatomy-of-a-fall/
 Annihilation,2018,2.5,,,,,https://letterboxd.com/film/annihilation/
 Ant-Man,2015,3.5,,,,,https://letterboxd.com/film/ant-man/
-Apostle,2018,2.5,,2026-02-15T00:00:00.000000Z,129,,https://letterboxd.com/film/apostle-2018/
+Apostle,2018,2.5,,2026-02-15T00:00:00.000000Z,,,https://letterboxd.com/film/apostle-2018/
 Arachnophobia,1990,4.0,,,,,https://letterboxd.com/film/arachnophobia/
 Ash,2025,1.0,,2026-04-04T00:00:00.000000Z,95,,https://letterboxd.com/film/ash-2025/
 Avatar: The Way of Water,2022,1.5,,,,,https://letterboxd.com/film/avatar-the-way-of-water/
@@ -79,7 +79,7 @@ Dust Bunny,2025,3.0,,2026-04-26T00:00:00.000000Z,106,Yes,https://letterboxd.com/
 Enemy,2013,3.5,,,,,https://letterboxd.com/film/enemy/
 Everything Everywhere All at Once,2022,4.0,,,,,https://letterboxd.com/film/everything-everywhere-all-at-once/
 Evil Dead II,1987,3.0,,2025-09-15T00:00:00.000000Z,84,,https://letterboxd.com/film/evil-dead-ii/
-Exit 8,2025,3.0,,2026-05-24T00:00:00.000000Z,95,,https://letterboxd.com/film/exit-8/
+Exit 8,2025,3.0,,2026-05-24T00:00:00.000000Z,,,https://letterboxd.com/film/exit-8/
 Extra Ordinary,2019,3.5,,2026-08-04T00:00:00.000000Z,94,,https://letterboxd.com/film/extra-ordinary/
 F9,2021,2.0,,2025-09-24T00:00:00.000000Z,143,,https://letterboxd.com/film/f9/
 Fargo,1996,5.0,,,,,https://letterboxd.com/film/fargo/
@@ -105,16 +105,16 @@ Happy Death Day,2017,3.5,,,,,https://letterboxd.com/film/happy-death-day/
 Heat,1995,3.0,,,,,https://letterboxd.com/film/heat-1995/
 Hell House LLC,2015,4.0,,2026-04-18T00:00:00.000000Z,91,,https://letterboxd.com/film/hell-house-llc/
 Hell House LLC III: Lake of Fire,2019,2.5,,2026-04-26T00:00:00.000000Z,86,,https://letterboxd.com/film/hell-house-llc-iii-lake-of-fire/
-Hellbender,2021,2.0,,2026-07-05T00:00:00.000000Z,83,,https://letterboxd.com/film/hellbender/
+Hellbender,2021,2.0,,2026-07-05T00:00:00.000000Z,,,https://letterboxd.com/film/hellbender/
 Hereditary,2018,4.5,,,,,https://letterboxd.com/film/hereditary/
 Heretic,2024,4.0,,,,,https://letterboxd.com/film/heretic-2024/
-Hokum,2026,4.0,,2026-06-10T00:00:00.000000Z,108,,https://letterboxd.com/film/hokum/
+Hokum,2026,4.0,,2026-06-10T00:00:00.000000Z,,,https://letterboxd.com/film/hokum/
 Hold the Dark,2018,2.0,,,,,https://letterboxd.com/film/hold-the-dark/
 Hot Fuzz,2007,4.5,,2026-06-26T00:00:00.000000Z,121,,https://letterboxd.com/film/hot-fuzz/
 Housebound,2014,3.5,,2026-08-04T00:00:00.000000Z,111,,https://letterboxd.com/film/housebound/
 How to Make a Killing,2026,1.5,,2026-08-19T00:00:00.000000Z,105,,https://letterboxd.com/film/how-to-make-a-killing-2026/
 I Know What You Did Last Summer,2025,2.5,,2026-07-02T00:00:00.000000Z,111,,https://letterboxd.com/film/i-know-what-you-did-last-summer-2025/
-I Love Boosters,2026,4.0,,2026-07-19T00:00:00.000000Z,113,,https://letterboxd.com/film/i-love-boosters/
+I Love Boosters,2026,4.0,,2026-07-19T00:00:00.000000Z,,,https://letterboxd.com/film/i-love-boosters/
 Immaculate,2024,2.5,,2026-08-07T00:00:00.000000Z,89,,https://letterboxd.com/film/immaculate-2024/
 In the Earth,2021,2.5,,2026-02-24T00:00:00.000000Z,107,,https://letterboxd.com/film/in-the-earth/
 Inception,2010,4.5,,,,,https://letterboxd.com/film/inception/
@@ -138,7 +138,7 @@ Kill Bill: Vol. 1,2003,3.0,,,,,https://letterboxd.com/film/kill-bill-vol-1/
 Kill List,2011,3.5,,2026-04-10T00:00:00.000000Z,95,,https://letterboxd.com/film/kill-list/
 Killers of the Flower Moon,2023,1.5,,,,,https://letterboxd.com/film/killers-of-the-flower-moon/
 Knives Out,2019,5.0,,,,,https://letterboxd.com/film/knives-out-2019/
-Kung Fu Panda,2008,4.0,,2026-06-10T00:00:00.000000Z,90,,https://letterboxd.com/film/kung-fu-panda/
+Kung Fu Panda,2008,4.0,,2026-06-10T00:00:00.000000Z,,,https://letterboxd.com/film/kung-fu-panda/
 Lake Mungo,2008,3.0,,,,,https://letterboxd.com/film/lake-mungo/
 Late Night with the Devil,2023,4.0,,,,,https://letterboxd.com/film/late-night-with-the-devil/
 Law Abiding Citizen,2009,3.0,,,,,https://letterboxd.com/film/law-abiding-citizen/
@@ -155,10 +155,10 @@ Mayhem,2017,3.5,,2026-07-17T00:00:00.000000Z,87,,https://letterboxd.com/film/may
 Memento,2000,4.5,,,,,https://letterboxd.com/film/memento/
 Mickey 17,2025,3.0,,,,,https://letterboxd.com/film/mickey-17/
 Midsommar,2019,4.5,,,,,https://letterboxd.com/film/midsommar/
-Mike & Nick & Nick & Alice,2026,3.5,,2026-07-11T00:00:00.000000Z,107,,https://letterboxd.com/film/mike-nick-nick-alice/
+Mike & Nick & Nick & Alice,2026,3.5,,2026-07-11T00:00:00.000000Z,,,https://letterboxd.com/film/mike-nick-nick-alice/
 Monkey Man,2024,2.0,,,,,https://letterboxd.com/film/monkey-man/
 Moon,2009,4.5,,2026-07-13T00:00:00.000000Z,97,,https://letterboxd.com/film/moon/
-My Cousin Vinny,1992,4.0,,2026-06-17T00:00:00.000000Z,119,,https://letterboxd.com/film/my-cousin-vinny/
+My Cousin Vinny,1992,4.0,,2026-06-17T00:00:00.000000Z,,,https://letterboxd.com/film/my-cousin-vinny/
 Night Patrol,2025,1.5,,2026-04-19T00:00:00.000000Z,104,,https://letterboxd.com/film/night-patrol-2025/
 Nightcrawler,2014,5.0,,2026-05-04T00:00:00.000000Z,118,,https://letterboxd.com/film/nightcrawler/
 Non-Stop,2014,3.0,,,,,https://letterboxd.com/film/non-stop-2014/
@@ -170,7 +170,7 @@ Ocean's Eleven,2001,4.0,,,,,https://letterboxd.com/film/oceans-eleven-2001/
 Oddity,2024,4.0,,2026-03-15T00:00:00.000000Z,98,Yes,https://letterboxd.com/film/oddity-2024/
 Oldboy,2003,2.0,,,,,https://letterboxd.com/film/oldboy/
 Olympus Has Fallen,2013,2.5,,,,,https://letterboxd.com/film/olympus-has-fallen/
-One Battle After Another,2025,4.5,,2026-02-07T00:00:00.000000Z,162,,https://letterboxd.com/film/one-battle-after-another/
+One Battle After Another,2025,4.5,,2026-02-07T00:00:00.000000Z,,,https://letterboxd.com/film/one-battle-after-another/
 One Cut of the Dead,2017,4.0,,2026-05-06T00:00:00.000000Z,96,,https://letterboxd.com/film/one-cut-of-the-dead/
 One Hour Photo,2002,3.5,,2026-05-31T00:00:00.000000Z,96,,https://letterboxd.com/film/one-hour-photo/
 Out of the Blue,2006,4.0,,2026-08-19T00:00:00.000000Z,103,,https://letterboxd.com/film/out-of-the-blue-2006/
@@ -210,6 +210,7 @@ Sinners,2025,4.5,,,,,https://letterboxd.com/film/sinners-2025/
 Sisu,2022,5.0,,2026-05-11T00:00:00.000000Z,91,Yes,https://letterboxd.com/film/sisu-2022/
 Sisu: Road to Revenge,2025,4.5,,2026-05-02T00:00:00.000000Z,89,,https://letterboxd.com/film/sisu-road-to-revenge/
 Smile,2022,1.5,,2026-06-01T00:00:00.000000Z,115,,https://letterboxd.com/film/smile-2022/
+Son of a Gun,2014,4.0,,2026-09-04T00:00:00.000000Z,108,,https://letterboxd.com/film/son-of-a-gun/
 Spectral,2016,3.0,,,,,https://letterboxd.com/film/spectral/
 Spider-Man: Across the Spider-Verse,2023,4.0,,,,,https://letterboxd.com/film/spider-man-across-the-spider-verse/
 Spider-Man: Into the Spider-Verse,2018,4.0,,,,,https://letterboxd.com/film/spider-man-into-the-spider-verse/
@@ -224,7 +225,7 @@ Strange Harvest,2024,4.0,,,,,https://letterboxd.com/film/strange-harvest-2024/
 Suicide Squad,2016,1.5,,,,,https://letterboxd.com/film/suicide-squad-2016/
 Sweetheart,2019,4.0,,,,,https://letterboxd.com/film/sweetheart-2019/
 Talk to Me,2022,4.0,,,,,https://letterboxd.com/film/talk-to-me-2022/
-Tears of the Sun,2003,2.5,,2026-08-10T00:00:00.000000Z,121,,https://letterboxd.com/film/tears-of-the-sun/
+Tears of the Sun,2003,2.5,,2026-08-10T00:00:00.000000Z,,,https://letterboxd.com/film/tears-of-the-sun/
 Tenet,2020,4.0,,,,,https://letterboxd.com/film/tenet/
 Terminator 2: Judgment Day,1991,4.5,,,,,https://letterboxd.com/film/terminator-2-judgment-day/
 The Astronaut,2025,1.5,,2026-04-26T00:00:00.000000Z,90,,https://letterboxd.com/film/the-astronaut-2025/
