@@ -1,10 +1,10 @@
 Name,Year,Rating,Liked,Watch Date,Runtime,Rewatched,Letterboxd URI
 10 Cloverfield Lane,2016,4.5,,,,,https://letterboxd.com/film/10-cloverfield-lane/
-21 Jump Street,2012,4.5,,2026-05-19T00:00:00.000000Z,,Yes,https://letterboxd.com/film/21-jump-street/
+21 Jump Street,2012,4.5,,2026-05-19T00:00:00.000000Z,109,Yes,https://letterboxd.com/film/21-jump-street/
 28 Days Later,2002,3.5,,,,,https://letterboxd.com/film/28-days-later/
-28 Years Later,2025,4.0,,2025-09-14T00:00:00.000000Z,,,https://letterboxd.com/film/28-years-later/
-28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,,,https://letterboxd.com/film/28-years-later-the-bone-temple/
-[REC],2007,3.5,,2026-04-08T00:00:00.000000Z,,,https://letterboxd.com/film/rec/
+28 Years Later,2025,4.0,,2025-09-14T00:00:00.000000Z,115,,https://letterboxd.com/film/28-years-later/
+28 Years Later: The Bone Temple,2026,4.5,,2026-04-09T00:00:00.000000Z,109,,https://letterboxd.com/film/28-years-later-the-bone-temple/
+[REC],2007,3.5,,2026-04-08T00:00:00.000000Z,78,,https://letterboxd.com/film/rec/
 A House of Dynamite,2025,3.5,,,,,https://letterboxd.com/film/a-house-of-dynamite/
 A Nightmare on Elm Street 3: Dream Warriors,1987,3.5,,,,,https://letterboxd.com/film/a-nightmare-on-elm-street-3-dream-warriors/
 A Quiet Place,2018,4.5,,,,,https://letterboxd.com/film/a-quiet-place-2018/
@@ -21,21 +21,21 @@ Ash,2025,1.0,,2026-04-04T00:00:00.000000Z,95,,https://letterboxd.com/film/ash-20
 Avatar: The Way of Water,2022,1.5,,,,,https://letterboxd.com/film/avatar-the-way-of-water/
 Baby Driver,2017,4.0,,,,,https://letterboxd.com/film/baby-driver/
 Backcountry,2014,2.0,,,,,https://letterboxd.com/film/backcountry/
-Backrooms,2026,4.0,,2026-08-07T00:00:00.000000Z,,,https://letterboxd.com/film/backrooms-2026/
+Backrooms,2026,4.0,,2026-08-07T00:00:00.000000Z,111,,https://letterboxd.com/film/backrooms-2026/
 Barbarian,2022,3.5,,,,,https://letterboxd.com/film/barbarian-2022/
 Batman Begins,2005,4.0,,,,,https://letterboxd.com/film/batman-begins/
-Behind the Mask: The Rise of Leslie Vernon,2006,4.0,,2026-02-24T00:00:00.000000Z,,,https://letterboxd.com/film/behind-the-mask-the-rise-of-leslie-vernon/
+Behind the Mask: The Rise of Leslie Vernon,2006,4.0,,2026-02-24T00:00:00.000000Z,91,,https://letterboxd.com/film/behind-the-mask-the-rise-of-leslie-vernon/
 Being John Malkovich,1999,4.5,,2026-07-27T00:00:00.000000Z,113,,https://letterboxd.com/film/being-john-malkovich/
-Better Watch Out,2016,3.5,,2026-05-08T00:00:00.000000Z,,,https://letterboxd.com/film/better-watch-out/
+Better Watch Out,2016,3.5,,2026-05-08T00:00:00.000000Z,89,,https://letterboxd.com/film/better-watch-out/
 Black Panther,2018,4.0,,,,,https://letterboxd.com/film/black-panther/
-Black Sheep,2006,2.5,,2026-01-31T00:00:00.000000Z,,,https://letterboxd.com/film/black-sheep-2006/
+Black Sheep,2006,2.5,,2026-01-31T00:00:00.000000Z,86,,https://letterboxd.com/film/black-sheep-2006/
 BlacKkKlansman,2018,5.0,,,,,https://letterboxd.com/film/blackkklansman/
 Blade Runner 2049,2017,4.0,,,,,https://letterboxd.com/film/blade-runner-2049/
-Bliss,2019,3.0,,2026-06-24T00:00:00.000000Z,,,https://letterboxd.com/film/bliss-2019/
+Bliss,2019,3.0,,2026-06-24T00:00:00.000000Z,80,,https://letterboxd.com/film/bliss-2019/
 Bloodsport,1988,1.5,,,,,https://letterboxd.com/film/bloodsport/
 Bodies Bodies Bodies,2022,3.0,,,,,https://letterboxd.com/film/bodies-bodies-bodies/
 Boys from County Hell,2020,2.5,,,,,https://letterboxd.com/film/the-boys-from-county-hell/
-Bram Stoker's Dracula,1992,2.5,,2026-06-21T00:00:00.000000Z,,,https://letterboxd.com/film/bram-stokers-dracula/
+Bram Stoker's Dracula,1992,2.5,,2026-06-21T00:00:00.000000Z,128,,https://letterboxd.com/film/bram-stokers-dracula/
 Bring Her Back,2025,4.0,,,,,https://letterboxd.com/film/bring-her-back/
 Bugonia,2025,4.0,,,,,https://letterboxd.com/film/bugonia/
 Bullet Train,2022,2.0,,,,,https://letterboxd.com/film/bullet-train/
@@ -52,16 +52,16 @@ Christine,1983,3.5,,,,,https://letterboxd.com/film/christine-1983/
 Civil War,2024,4.0,,,,,https://letterboxd.com/film/civil-war-2024/
 Cocaine Bear,2023,4.5,,,,,https://letterboxd.com/film/cocaine-bear/
 Coherence,2013,4.0,,,,,https://letterboxd.com/film/coherence/
-Cold Storage,2026,3.0,,2026-07-25T00:00:00.000000Z,,,https://letterboxd.com/film/cold-storage-2026/
+Cold Storage,2026,3.0,,2026-07-25T00:00:00.000000Z,99,,https://letterboxd.com/film/cold-storage-2026/
 Creep,2014,3.5,,2026-04-03T00:00:00.000000Z,82,,https://letterboxd.com/film/creep-2014/
 Crime 101,2026,2.5,,2026-08-01T00:00:00.000000Z,141,,https://letterboxd.com/film/crime-101/
 Cube,1997,2.0,,,,,https://letterboxd.com/film/cube/
 Cuckoo,2024,3.5,,,,,https://letterboxd.com/film/cuckoo-2024/
-Dagon,2001,3.0,,2026-04-13T00:00:00.000000Z,,,https://letterboxd.com/film/dagon/
+Dagon,2001,3.0,,2026-04-13T00:00:00.000000Z,95,,https://letterboxd.com/film/dagon/
 Dawn of the Dead,2004,3.5,,,,,https://letterboxd.com/film/dawn-of-the-dead-2004/
 Dawn of the Dead,1978,3.5,,,,,https://letterboxd.com/film/dawn-of-the-dead/
 Dead Man's Wire,2025,4.5,,2026-07-24T00:00:00.000000Z,106,,https://letterboxd.com/film/dead-mans-wire/
-Dead of Winter,2025,3.0,,2026-03-06T00:00:00.000000Z,,,https://letterboxd.com/film/dead-of-winter-2025/
+Dead of Winter,2025,3.0,,2026-03-06T00:00:00.000000Z,98,,https://letterboxd.com/film/dead-of-winter-2025/
 Deadpool,2016,4.0,,,,,https://letterboxd.com/film/deadpool/
 Deadpool & Wolverine,2024,2.5,,,,,https://letterboxd.com/film/deadpool-wolverine/
 Death of a Unicorn,2025,2.5,,,,,https://letterboxd.com/film/death-of-a-unicorn/
@@ -70,20 +70,20 @@ Demolition Man,1993,3.5,,,,,https://letterboxd.com/film/demolition-man/
 Die Hard,1988,4.5,,,,,https://letterboxd.com/film/die-hard/
 Doctor Strange,2016,3.0,,,,,https://letterboxd.com/film/doctor-strange-2016/
 Don't Look Up,2021,2.5,,,,,https://letterboxd.com/film/dont-look-up-2021/
-Dracula 2000,2000,3.5,,2026-06-24T00:00:00.000000Z,,,https://letterboxd.com/film/dracula-2000/
+Dracula 2000,2000,3.5,,2026-06-24T00:00:00.000000Z,99,,https://letterboxd.com/film/dracula-2000/
 Dredd,2012,4.0,,2026-06-26T00:00:00.000000Z,96,,https://letterboxd.com/film/dredd/
 Drive,2011,4.5,,,,,https://letterboxd.com/film/drive-2011/
 Dune,2021,3.5,,,,,https://letterboxd.com/film/dune-2021/
 Dune: Part Two,2024,3.0,,,,,https://letterboxd.com/film/dune-part-two/
-Dust Bunny,2025,3.0,,2026-04-26T00:00:00.000000Z,,Yes,https://letterboxd.com/film/dust-bunny/
+Dust Bunny,2025,3.0,,2026-04-26T00:00:00.000000Z,106,Yes,https://letterboxd.com/film/dust-bunny/
 Enemy,2013,3.5,,,,,https://letterboxd.com/film/enemy/
 Everything Everywhere All at Once,2022,4.0,,,,,https://letterboxd.com/film/everything-everywhere-all-at-once/
-Evil Dead II,1987,3.0,,2025-09-15T00:00:00.000000Z,,,https://letterboxd.com/film/evil-dead-ii/
+Evil Dead II,1987,3.0,,2025-09-15T00:00:00.000000Z,84,,https://letterboxd.com/film/evil-dead-ii/
 Exit 8,2025,3.0,,2026-05-24T00:00:00.000000Z,95,,https://letterboxd.com/film/exit-8/
 Extra Ordinary,2019,3.5,,2026-08-04T00:00:00.000000Z,94,,https://letterboxd.com/film/extra-ordinary/
 F9,2021,2.0,,2025-09-24T00:00:00.000000Z,143,,https://letterboxd.com/film/f9/
 Fargo,1996,5.0,,,,,https://letterboxd.com/film/fargo/
-Fast & Furious 6,2013,3.0,,2025-08-28T00:00:00.000000Z,,,https://letterboxd.com/film/fast-furious-6/
+Fast & Furious 6,2013,3.0,,2025-08-28T00:00:00.000000Z,130,,https://letterboxd.com/film/fast-furious-6/
 Fast & Furious Presents: Hobbs & Shaw,2019,4.0,,,,,https://letterboxd.com/film/fast-furious-presents-hobbs-shaw/
 Fast Charlie,2023,3.5,,2026-07-16T00:00:00.000000Z,90,,https://letterboxd.com/film/fast-charlie/
 Frankenstein,2025,3.5,,,,,https://letterboxd.com/film/frankenstein-2025/
@@ -94,9 +94,9 @@ Furiosa: A Mad Max Saga,2024,3.0,,,,,https://letterboxd.com/film/furiosa-a-mad-m
 Game Night,2018,3.5,,,,,https://letterboxd.com/film/game-night/
 Get Out,2017,4.5,,,,,https://letterboxd.com/film/get-out-2017/
 Glass Onion,2022,3.5,,,,,https://letterboxd.com/film/glass-onion/
-Glorious,2022,3.5,,2026-07-09T00:00:00.000000Z,,,https://letterboxd.com/film/glorious-2022/
+Glorious,2022,3.5,,2026-07-09T00:00:00.000000Z,79,,https://letterboxd.com/film/glorious-2022/
 Good Boy,2025,4.0,,,,,https://letterboxd.com/film/good-boy-2025/
-"Good Luck, Have Fun, Don't Die",2025,3.5,,2026-04-15T00:00:00.000000Z,,,https://letterboxd.com/film/good-luck-have-fun-dont-die/
+"Good Luck, Have Fun, Don't Die",2025,3.5,,2026-04-15T00:00:00.000000Z,134,,https://letterboxd.com/film/good-luck-have-fun-dont-die/
 Gremlins,1984,2.0,,2026-04-04T00:00:00.000000Z,106,,https://letterboxd.com/film/gremlins/
 Guardians of the Galaxy,2014,3.5,,,,,https://letterboxd.com/film/guardians-of-the-galaxy/
 Guardians of the Galaxy Vol. 2,2017,1.0,,,,,https://letterboxd.com/film/guardians-of-the-galaxy-vol-2/
@@ -104,19 +104,19 @@ Hannibal,2001,2.5,,,,,https://letterboxd.com/film/hannibal/
 Happy Death Day,2017,3.5,,,,,https://letterboxd.com/film/happy-death-day/
 Heat,1995,3.0,,,,,https://letterboxd.com/film/heat-1995/
 Hell House LLC,2015,4.0,,2026-04-18T00:00:00.000000Z,91,,https://letterboxd.com/film/hell-house-llc/
-Hell House LLC III: Lake of Fire,2019,2.5,,2026-04-26T00:00:00.000000Z,,,https://letterboxd.com/film/hell-house-llc-iii-lake-of-fire/
+Hell House LLC III: Lake of Fire,2019,2.5,,2026-04-26T00:00:00.000000Z,86,,https://letterboxd.com/film/hell-house-llc-iii-lake-of-fire/
 Hellbender,2021,2.0,,2026-07-05T00:00:00.000000Z,83,,https://letterboxd.com/film/hellbender/
 Hereditary,2018,4.5,,,,,https://letterboxd.com/film/hereditary/
 Heretic,2024,4.0,,,,,https://letterboxd.com/film/heretic-2024/
-Hokum,2026,4.0,,2026-06-10T00:00:00.000000Z,,,https://letterboxd.com/film/hokum/
+Hokum,2026,4.0,,2026-06-10T00:00:00.000000Z,108,,https://letterboxd.com/film/hokum/
 Hold the Dark,2018,2.0,,,,,https://letterboxd.com/film/hold-the-dark/
 Hot Fuzz,2007,4.5,,2026-06-26T00:00:00.000000Z,121,,https://letterboxd.com/film/hot-fuzz/
 Housebound,2014,3.5,,2026-08-04T00:00:00.000000Z,111,,https://letterboxd.com/film/housebound/
-How to Make a Killing,2026,1.5,,2026-08-19T00:00:00.000000Z,,,https://letterboxd.com/film/how-to-make-a-killing-2026/
+How to Make a Killing,2026,1.5,,2026-08-19T00:00:00.000000Z,105,,https://letterboxd.com/film/how-to-make-a-killing-2026/
 I Know What You Did Last Summer,2025,2.5,,2026-07-02T00:00:00.000000Z,111,,https://letterboxd.com/film/i-know-what-you-did-last-summer-2025/
-I Love Boosters,2026,4.0,,2026-07-19T00:00:00.000000Z,,,https://letterboxd.com/film/i-love-boosters/
-Immaculate,2024,2.5,,2026-08-07T00:00:00.000000Z,,,https://letterboxd.com/film/immaculate-2024/
-In the Earth,2021,2.5,,2026-02-24T00:00:00.000000Z,,,https://letterboxd.com/film/in-the-earth/
+I Love Boosters,2026,4.0,,2026-07-19T00:00:00.000000Z,113,,https://letterboxd.com/film/i-love-boosters/
+Immaculate,2024,2.5,,2026-08-07T00:00:00.000000Z,89,,https://letterboxd.com/film/immaculate-2024/
+In the Earth,2021,2.5,,2026-02-24T00:00:00.000000Z,107,,https://letterboxd.com/film/in-the-earth/
 Inception,2010,4.5,,,,,https://letterboxd.com/film/inception/
 Indiana Jones and the Temple of Doom,1984,4.0,,,,,https://letterboxd.com/film/indiana-jones-and-the-temple-of-doom/
 Infinity Pool,2023,4.0,,2026-03-19T00:00:00.000000Z,118,,https://letterboxd.com/film/infinity-pool/
@@ -125,8 +125,8 @@ Interceptor,2022,0.5,,,,,https://letterboxd.com/film/interceptor-2022/
 Interstellar,2014,5.0,,,,,https://letterboxd.com/film/interstellar/
 Invasion of the Body Snatchers,1978,4.5,,,,,https://letterboxd.com/film/invasion-of-the-body-snatchers-1978/
 It,2017,4.0,,,,,https://letterboxd.com/film/it-2017/
-It Chapter Two,2019,2.0,,2025-12-06T00:00:00.000000Z,,,https://letterboxd.com/film/it-chapter-two/
-Jakob's Wife,2021,3.5,,2026-03-19T00:00:00.000000Z,,,https://letterboxd.com/film/jakobs-wife/
+It Chapter Two,2019,2.0,,2025-12-06T00:00:00.000000Z,169,,https://letterboxd.com/film/it-chapter-two/
+Jakob's Wife,2021,3.5,,2026-03-19T00:00:00.000000Z,98,,https://letterboxd.com/film/jakobs-wife/
 Jarhead,2005,2.5,,,,,https://letterboxd.com/film/jarhead/
 John Wick,2014,4.0,,,,,https://letterboxd.com/film/john-wick/
 Jojo Rabbit,2019,1.5,,,,,https://letterboxd.com/film/jojo-rabbit/
@@ -138,7 +138,7 @@ Kill Bill: Vol. 1,2003,3.0,,,,,https://letterboxd.com/film/kill-bill-vol-1/
 Kill List,2011,3.5,,2026-04-10T00:00:00.000000Z,95,,https://letterboxd.com/film/kill-list/
 Killers of the Flower Moon,2023,1.5,,,,,https://letterboxd.com/film/killers-of-the-flower-moon/
 Knives Out,2019,5.0,,,,,https://letterboxd.com/film/knives-out-2019/
-Kung Fu Panda,2008,4.0,,2026-06-10T00:00:00.000000Z,,,https://letterboxd.com/film/kung-fu-panda/
+Kung Fu Panda,2008,4.0,,2026-06-10T00:00:00.000000Z,90,,https://letterboxd.com/film/kung-fu-panda/
 Lake Mungo,2008,3.0,,,,,https://letterboxd.com/film/lake-mungo/
 Late Night with the Devil,2023,4.0,,,,,https://letterboxd.com/film/late-night-with-the-devil/
 Law Abiding Citizen,2009,3.0,,,,,https://letterboxd.com/film/law-abiding-citizen/
@@ -151,55 +151,55 @@ Mad Max: Fury Road,2015,5.0,,,,,https://letterboxd.com/film/mad-max-fury-road/
 Mandy,2018,1.0,,2026-04-10T00:00:00.000000Z,122,,https://letterboxd.com/film/mandy-2018/
 Maniac Cop,1988,1.5,,,,,https://letterboxd.com/film/maniac-cop/
 Marshmallow,2025,4.0,,,,,https://letterboxd.com/film/marshmallow-2025/
-Mayhem,2017,3.5,,2026-07-17T00:00:00.000000Z,,,https://letterboxd.com/film/mayhem-2017/
+Mayhem,2017,3.5,,2026-07-17T00:00:00.000000Z,87,,https://letterboxd.com/film/mayhem-2017/
 Memento,2000,4.5,,,,,https://letterboxd.com/film/memento/
-Memories of Murder,2003,4.0,,2026-09-11T00:00:00.000000Z,,,https://letterboxd.com/film/memories-of-murder/
+Memories of Murder,2003,4.0,,2026-09-11T00:00:00.000000Z,131,,https://letterboxd.com/film/memories-of-murder/
 Mickey 17,2025,3.0,,,,,https://letterboxd.com/film/mickey-17/
 Midsommar,2019,4.5,,,,,https://letterboxd.com/film/midsommar/
-Mike & Nick & Nick & Alice,2026,3.5,,2026-07-11T00:00:00.000000Z,,,https://letterboxd.com/film/mike-nick-nick-alice/
+Mike & Nick & Nick & Alice,2026,3.5,,2026-07-11T00:00:00.000000Z,107,,https://letterboxd.com/film/mike-nick-nick-alice/
 Monkey Man,2024,2.0,,,,,https://letterboxd.com/film/monkey-man/
 Moon,2009,4.5,,2026-07-13T00:00:00.000000Z,97,,https://letterboxd.com/film/moon/
-Mutiny,2026,2.5,,2026-09-11T00:00:00.000000Z,,,https://letterboxd.com/film/mutiny-2026/
+Mutiny,2026,2.5,,2026-09-11T00:00:00.000000Z,96,,https://letterboxd.com/film/mutiny-2026/
 My Cousin Vinny,1992,4.0,,2026-06-17T00:00:00.000000Z,119,,https://letterboxd.com/film/my-cousin-vinny/
-Night Patrol,2025,1.5,,2026-04-19T00:00:00.000000Z,,,https://letterboxd.com/film/night-patrol-2025/
-Nightcrawler,2014,5.0,,2026-05-04T00:00:00.000000Z,,,https://letterboxd.com/film/nightcrawler/
+Night Patrol,2025,1.5,,2026-04-19T00:00:00.000000Z,104,,https://letterboxd.com/film/night-patrol-2025/
+Nightcrawler,2014,5.0,,2026-05-04T00:00:00.000000Z,118,,https://letterboxd.com/film/nightcrawler/
 Non-Stop,2014,3.0,,,,,https://letterboxd.com/film/non-stop-2014/
 Nope,2022,2.0,,,,,https://letterboxd.com/film/nope/
 Normal,2025,2.0,,2026-05-25T00:00:00.000000Z,91,,https://letterboxd.com/film/normal-2025/
 Nosferatu,2024,4.0,,,,,https://letterboxd.com/film/nosferatu-2024/
-Obsession,2025,4.5,,2026-07-04T00:00:00.000000Z,,,https://letterboxd.com/film/obsession-2025/
+Obsession,2025,4.5,,2026-07-04T00:00:00.000000Z,109,,https://letterboxd.com/film/obsession-2025/
 Ocean's Eleven,2001,4.0,,,,,https://letterboxd.com/film/oceans-eleven-2001/
-Oddity,2024,4.0,,2026-03-15T00:00:00.000000Z,,Yes,https://letterboxd.com/film/oddity-2024/
+Oddity,2024,4.0,,2026-03-15T00:00:00.000000Z,98,Yes,https://letterboxd.com/film/oddity-2024/
 Oldboy,2003,2.0,,,,,https://letterboxd.com/film/oldboy/
 Olympus Has Fallen,2013,2.5,,,,,https://letterboxd.com/film/olympus-has-fallen/
 One Battle After Another,2025,4.5,,2026-02-07T00:00:00.000000Z,162,,https://letterboxd.com/film/one-battle-after-another/
 One Cut of the Dead,2017,4.0,,2026-05-06T00:00:00.000000Z,96,,https://letterboxd.com/film/one-cut-of-the-dead/
-One Hour Photo,2002,3.5,,2026-05-31T00:00:00.000000Z,,,https://letterboxd.com/film/one-hour-photo/
+One Hour Photo,2002,3.5,,2026-05-31T00:00:00.000000Z,96,,https://letterboxd.com/film/one-hour-photo/
 Out of the Blue,2006,4.0,,2026-08-19T00:00:00.000000Z,103,,https://letterboxd.com/film/out-of-the-blue-2006/
 Paranormal Activity,2007,3.5,,2026-03-25T00:00:00.000000Z,86,,https://letterboxd.com/film/paranormal-activity/
 Paranormal Activity 2,2010,2.5,,2026-04-23T00:00:00.000000Z,91,,https://letterboxd.com/film/paranormal-activity-2/
 Paranormal Activity 3,2011,3.5,,2026-04-26T00:00:00.000000Z,83,,https://letterboxd.com/film/paranormal-activity-3/
-Paranormal Activity 4,2012,1.5,,2026-05-18T00:00:00.000000Z,,,https://letterboxd.com/film/paranormal-activity-4/
+Paranormal Activity 4,2012,1.5,,2026-05-18T00:00:00.000000Z,87,,https://letterboxd.com/film/paranormal-activity-4/
 Paranormal Activity: The Marked Ones,2014,3.0,,2026-05-26T00:00:00.000000Z,84,,https://letterboxd.com/film/paranormal-activity-the-marked-ones/
 Parasite,2019,4.0,,,,,https://letterboxd.com/film/parasite-2019/
-Possessor,2020,2.0,,2026-03-19T00:00:00.000000Z,,,https://letterboxd.com/film/possessor/
+Possessor,2020,2.0,,2026-03-19T00:00:00.000000Z,103,,https://letterboxd.com/film/possessor/
 Predator: Badlands,2025,4.0,,,,,https://letterboxd.com/film/predator-badlands/
 Prey,2022,4.0,,,,,https://letterboxd.com/film/prey-2022/
-Primate,2025,3.5,,2026-02-22T00:00:00.000000Z,,,https://letterboxd.com/film/primate-2025/
+Primate,2025,3.5,,2026-02-22T00:00:00.000000Z,89,,https://letterboxd.com/film/primate-2025/
 Prisoners,2013,4.0,,,,,https://letterboxd.com/film/prisoners/
 Project Hail Mary,2026,4.5,Yes,2026-05-23T00:00:00.000000Z,156,Yes,https://letterboxd.com/film/project-hail-mary/
 Pulp Fiction,1994,5.0,,,,,https://letterboxd.com/film/pulp-fiction/
 Raiders of the Lost Ark,1981,5.0,,,,,https://letterboxd.com/film/raiders-of-the-lost-ark/
-Rare Exports: A Christmas Tale,2010,3.5,,2026-05-30T00:00:00.000000Z,,,https://letterboxd.com/film/rare-exports-a-christmas-tale/
+Rare Exports: A Christmas Tale,2010,3.5,,2026-05-30T00:00:00.000000Z,83,,https://letterboxd.com/film/rare-exports-a-christmas-tale/
 Re-Animator,1985,4.0,,2025-10-27T00:00:00.000000Z,86,,https://letterboxd.com/film/re-animator/
 Ready or Not,2019,3.5,,,,,https://letterboxd.com/film/ready-or-not-2019/
 Ready or Not 2: Here I Come,2026,3.5,,2026-05-16T00:00:00.000000Z,108,,https://letterboxd.com/film/ready-or-not-2-here-i-come/
-Redux Redux,2025,2.5,,2026-08-22T00:00:00.000000Z,,,https://letterboxd.com/film/redux-redux/
+Redux Redux,2025,2.5,,2026-08-22T00:00:00.000000Z,109,,https://letterboxd.com/film/redux-redux/
 Repo Man,1984,3.5,,,,,https://letterboxd.com/film/repo-man/
 Reservoir Dogs,1992,4.5,,,,,https://letterboxd.com/film/reservoir-dogs/
 Riders of Justice,2020,5.0,,,,,https://letterboxd.com/film/riders-of-justice/
 Rogue,2007,1.5,,,,,https://letterboxd.com/film/rogue/
-Roofman,2025,3.0,,2026-02-27T00:00:00.000000Z,,,https://letterboxd.com/film/roofman/
+Roofman,2025,3.0,,2026-02-27T00:00:00.000000Z,126,,https://letterboxd.com/film/roofman/
 Sand Castle,2017,3.0,,,,,https://letterboxd.com/film/sand-castle-2017/
 Saving Private Ryan,1998,3.5,,,,,https://letterboxd.com/film/saving-private-ryan/
 Scream,1996,4.5,,,,,https://letterboxd.com/film/scream/
@@ -210,10 +210,10 @@ Shaun of the Dead,2004,4.5,,,,,https://letterboxd.com/film/shaun-of-the-dead/
 Single White Female,1992,2.5,,2026-06-29T00:00:00.000000Z,108,,https://letterboxd.com/film/single-white-female/
 Sinners,2025,4.5,,,,,https://letterboxd.com/film/sinners-2025/
 Sisu,2022,5.0,,2026-05-11T00:00:00.000000Z,91,Yes,https://letterboxd.com/film/sisu-2022/
-Sisu: Road to Revenge,2025,4.5,,2026-05-02T00:00:00.000000Z,,,https://letterboxd.com/film/sisu-road-to-revenge/
+Sisu: Road to Revenge,2025,4.5,,2026-05-02T00:00:00.000000Z,89,,https://letterboxd.com/film/sisu-road-to-revenge/
 Smile,2022,1.5,,2026-06-01T00:00:00.000000Z,115,,https://letterboxd.com/film/smile-2022/
 Snowpiercer,2013,3.5,,2026-09-11T00:00:00.000000Z,127,,https://letterboxd.com/film/snowpiercer/
-Son of a Gun,2014,4.0,,2026-09-04T00:00:00.000000Z,,,https://letterboxd.com/film/son-of-a-gun/
+Son of a Gun,2014,4.0,,2026-09-04T00:00:00.000000Z,108,,https://letterboxd.com/film/son-of-a-gun/
 Spectral,2016,3.0,,,,,https://letterboxd.com/film/spectral/
 Spider-Man: Across the Spider-Verse,2023,4.0,,,,,https://letterboxd.com/film/spider-man-across-the-spider-verse/
 Spider-Man: Into the Spider-Verse,2018,4.0,,,,,https://letterboxd.com/film/spider-man-into-the-spider-verse/
@@ -228,7 +228,7 @@ Strange Harvest,2024,4.0,,,,,https://letterboxd.com/film/strange-harvest-2024/
 Suicide Squad,2016,1.5,,,,,https://letterboxd.com/film/suicide-squad-2016/
 Sweetheart,2019,4.0,,,,,https://letterboxd.com/film/sweetheart-2019/
 Talk to Me,2022,4.0,,,,,https://letterboxd.com/film/talk-to-me-2022/
-Tears of the Sun,2003,2.5,,2026-08-10T00:00:00.000000Z,,,https://letterboxd.com/film/tears-of-the-sun/
+Tears of the Sun,2003,2.5,,2026-08-10T00:00:00.000000Z,121,,https://letterboxd.com/film/tears-of-the-sun/
 Tenet,2020,4.0,,,,,https://letterboxd.com/film/tenet/
 Terminator 2: Judgment Day,1991,4.5,,,,,https://letterboxd.com/film/terminator-2-judgment-day/
 The Astronaut,2025,1.5,,2026-04-26T00:00:00.000000Z,90,,https://letterboxd.com/film/the-astronaut-2025/
@@ -239,26 +239,26 @@ The Batman,2022,3.5,,,,,https://letterboxd.com/film/the-batman/
 The Black Phone,2021,3.0,,,,,https://letterboxd.com/film/the-black-phone/
 The Blackening,2022,3.5,,,,,https://letterboxd.com/film/the-blackening/
 The Blair Witch Project,1999,3.5,,2026-03-19T00:00:00.000000Z,81,Yes,https://letterboxd.com/film/the-blair-witch-project/
-The Bluff,2026,2.5,,2026-05-02T00:00:00.000000Z,,,https://letterboxd.com/film/the-bluff-2026/
+The Bluff,2026,2.5,,2026-05-02T00:00:00.000000Z,103,,https://letterboxd.com/film/the-bluff-2026/
 The Damned,2024,4.0,,,,,https://letterboxd.com/film/the-damned-2024-1/
 The Dark Knight,2008,4.0,,,,,https://letterboxd.com/film/the-dark-knight/
 The Dark Knight Rises,2012,3.5,,,,,https://letterboxd.com/film/the-dark-knight-rises/
 The Empty Man,2020,2.5,,2026-04-13T00:00:00.000000Z,137,,https://letterboxd.com/film/the-empty-man/
-The Endless,2017,3.5,,2026-08-04T00:00:00.000000Z,,,https://letterboxd.com/film/the-endless/
+The Endless,2017,3.5,,2026-08-04T00:00:00.000000Z,112,,https://letterboxd.com/film/the-endless/
 The Exorcist,1973,4.0,,2026-03-27T00:00:00.000000Z,122,,https://letterboxd.com/film/the-exorcist/
 The Fall Guy,2024,2.5,,,,,https://letterboxd.com/film/the-fall-guy-2024/
 The Fifth Element,1997,3.5,,,,,https://letterboxd.com/film/the-fifth-element/
 The Final Girls,2015,3.0,,2026-07-19T00:00:00.000000Z,91,,https://letterboxd.com/film/the-final-girls/
-The First Omen,2024,3.5,,2026-03-29T00:00:00.000000Z,,,https://letterboxd.com/film/the-first-omen/
+The First Omen,2024,3.5,,2026-03-29T00:00:00.000000Z,119,,https://letterboxd.com/film/the-first-omen/
 The Fly,1986,4.0,,2026-03-25T00:00:00.000000Z,96,,https://letterboxd.com/film/the-fly-1986/
 The Girl with All the Gifts,2016,4.0,,,,,https://letterboxd.com/film/the-girl-with-all-the-gifts/
 The Guest,2014,4.0,,,,,https://letterboxd.com/film/the-guest-2014/
 The Hateful Eight,2015,3.5,,,,,https://letterboxd.com/film/the-hateful-eight/
-The Hitman's Bodyguard,2017,3.0,,2026-08-10T00:00:00.000000Z,,,https://letterboxd.com/film/the-hitmans-bodyguard/
+The Hitman's Bodyguard,2017,3.0,,2026-08-10T00:00:00.000000Z,118,,https://letterboxd.com/film/the-hitmans-bodyguard/
 The Hunt,2020,3.5,,,,,https://letterboxd.com/film/the-hunt-2020/
 The Last Voyage of the Demeter,2023,3.0,,,,,https://letterboxd.com/film/the-last-voyage-of-the-demeter/
 The Lost Boys,1987,3.5,,,,,https://letterboxd.com/film/the-lost-boys/
-The Loved Ones,2009,4.0,,2026-04-05T00:00:00.000000Z,,,https://letterboxd.com/film/the-loved-ones/
+The Loved Ones,2009,4.0,,2026-04-05T00:00:00.000000Z,84,,https://letterboxd.com/film/the-loved-ones/
 The Man Who Killed Hitler and Then the Bigfoot,2018,1.5,,2025-10-27T00:00:00.000000Z,96,,https://letterboxd.com/film/the-man-who-killed-hitler-and-then-the-bigfoot/
 The Marksman,2021,2.0,,2025-11-29T00:00:00.000000Z,108,,https://letterboxd.com/film/the-marksman-2021/
 The Martian,2015,5.0,,,,,https://letterboxd.com/film/the-martian/
@@ -274,10 +274,10 @@ The Northman,2022,4.0,,,,,https://letterboxd.com/film/the-northman/
 The Omen,1976,4.0,,2026-04-02T00:00:00.000000Z,111,,https://letterboxd.com/film/the-omen/
 The Penguin,2024,5.0,,,,,https://letterboxd.com/film/the-penguin-2024/
 The Pope's Exorcist,2023,3.5,,,,,https://letterboxd.com/film/the-popes-exorcist/
-The Raid,2011,4.5,,2026-02-22T00:00:00.000000Z,,,https://letterboxd.com/film/the-raid-2011/
+The Raid,2011,4.5,,2026-02-22T00:00:00.000000Z,101,,https://letterboxd.com/film/the-raid-2011/
 The Return of the Living Dead,1985,4.0,,,,,https://letterboxd.com/film/the-return-of-the-living-dead/
 The Rip,2026,3.5,,,,,https://letterboxd.com/film/the-rip-2026/
-The Ritual,2017,,,2026-08-04T00:00:00.000000Z,,,https://letterboxd.com/film/the-ritual-2017/
+The Ritual,2017,,,2026-08-04T00:00:00.000000Z,94,,https://letterboxd.com/film/the-ritual-2017/
 The Ruins,2008,2.0,,2026-02-21T00:00:00.000000Z,91,,https://letterboxd.com/film/the-ruins/
 The Running Man,2025,2.5,,,,,https://letterboxd.com/film/the-running-man-2025/
 The Running Man,1987,3.0,,,,,https://letterboxd.com/film/the-running-man/
@@ -288,27 +288,27 @@ The Silence of the Lambs,1991,5.0,,,,,https://letterboxd.com/film/the-silence-of
 The Suicide Squad,2021,4.0,,,,,https://letterboxd.com/film/the-suicide-squad/
 The Terminator,1984,3.5,,,,,https://letterboxd.com/film/the-terminator/
 The Thing,1982,4.5,,,,,https://letterboxd.com/film/the-thing/
-The Thursday Murder Club,2025,2.0,,2025-09-01T00:00:00.000000Z,,Yes,https://letterboxd.com/film/the-thursday-murder-club/
+The Thursday Murder Club,2025,2.0,,2025-09-01T00:00:00.000000Z,118,Yes,https://letterboxd.com/film/the-thursday-murder-club/
 The Truman Show,1998,3.0,,,,,https://letterboxd.com/film/the-truman-show/
 The Ugly Stepsister,2025,4.0,,,,,https://letterboxd.com/film/the-ugly-stepsister/
-The Vast of Night,2019,4.5,,2026-03-19T00:00:00.000000Z,,,https://letterboxd.com/film/the-vast-of-night/
+The Vast of Night,2019,4.5,,2026-03-19T00:00:00.000000Z,91,,https://letterboxd.com/film/the-vast-of-night/
 The Wailing,2016,4.5,,,,,https://letterboxd.com/film/the-wailing/
 The Watchers,2024,1.5,,,,,https://letterboxd.com/film/the-watchers-2024/
 The Witch,2015,3.5,,,,,https://letterboxd.com/film/the-witch-2015/
 There Will Be Blood,2007,4.5,,,,,https://letterboxd.com/film/there-will-be-blood/
 Thor,2011,2.5,,,,,https://letterboxd.com/film/thor/
 Thor: Ragnarok,2017,4.0,,,,,https://letterboxd.com/film/thor-ragnarok/
-Thrash,2026,1.5,,2026-04-14T00:00:00.000000Z,,,https://letterboxd.com/film/thrash-2026/
+Thrash,2026,1.5,,2026-04-14T00:00:00.000000Z,84,,https://letterboxd.com/film/thrash-2026/
 "Three Billboards Outside Ebbing, Missouri",2017,5.0,,2026-08-23T00:00:00.000000Z,115,,https://letterboxd.com/film/three-billboards-outside-ebbing-missouri/
 Thunderbolts*,2025,3.0,,2026-08-25T00:00:00.000000Z,127,,https://letterboxd.com/film/thunderbolts/
 Top Gun: Maverick,2022,3.5,,,,,https://letterboxd.com/film/top-gun-maverick/
-Trap,2024,2.0,,2026-01-27T00:00:00.000000Z,,,https://letterboxd.com/film/trap-2024/
+Trap,2024,2.0,,2026-01-27T00:00:00.000000Z,105,,https://letterboxd.com/film/trap-2024/
 Triangle,2009,3.5,,2026-04-17T00:00:00.000000Z,99,,https://letterboxd.com/film/triangle-2009/
-Trick 'r Treat,2007,3.0,,2026-05-15T00:00:00.000000Z,,,https://letterboxd.com/film/trick-r-treat/
-Tucker and Dale vs. Evil,2010,3.5,,2026-05-06T00:00:00.000000Z,,,https://letterboxd.com/film/tucker-and-dale-vs-evil/
+Trick 'r Treat,2007,3.0,,2026-05-15T00:00:00.000000Z,82,,https://letterboxd.com/film/trick-r-treat/
+Tucker and Dale vs. Evil,2010,3.5,,2026-05-06T00:00:00.000000Z,89,,https://letterboxd.com/film/tucker-and-dale-vs-evil/
 Twisters,2024,2.0,,,,,https://letterboxd.com/film/twisters/
-undertone,2025,3.5,,2026-07-03T00:00:00.000000Z,,,https://letterboxd.com/film/undertone-2025/
-Upgrade,2018,3.5,,2026-03-19T00:00:00.000000Z,,,https://letterboxd.com/film/upgrade/
+undertone,2025,3.5,,2026-07-03T00:00:00.000000Z,94,,https://letterboxd.com/film/undertone-2025/
+Upgrade,2018,3.5,,2026-03-19T00:00:00.000000Z,100,,https://letterboxd.com/film/upgrade/
 Us,2019,4.0,,,,,https://letterboxd.com/film/us-2019/
 Videodrome,1983,4.5,,,,,https://letterboxd.com/film/videodrome/
 Villains,2019,4.5,,,,,https://letterboxd.com/film/villains-2019/
@@ -317,7 +317,7 @@ War Machine,2026,2.5,,,,,https://letterboxd.com/film/war-machine-2026/
 Warfare,2025,4.5,,,,,https://letterboxd.com/film/warfare/
 We Summon the Darkness,2019,2.5,,2026-03-19T00:00:00.000000Z,91,,https://letterboxd.com/film/we-summon-the-darkness/
 Weapons,2025,4.5,,,,,https://letterboxd.com/film/weapons-2025/
-Werewolves Within,2021,4.0,,2026-08-04T00:00:00.000000Z,,,https://letterboxd.com/film/werewolves-within/
-When Evil Lurks,2023,4.0,,2026-03-19T00:00:00.000000Z,,Yes,https://letterboxd.com/film/when-evil-lurks/
+Werewolves Within,2021,4.0,,2026-08-04T00:00:00.000000Z,96,,https://letterboxd.com/film/werewolves-within/
+When Evil Lurks,2023,4.0,,2026-03-19T00:00:00.000000Z,100,Yes,https://letterboxd.com/film/when-evil-lurks/
 Wind River,2017,4.5,,,,,https://letterboxd.com/film/wind-river-2017/
 Zodiac,2007,3.0,,,,,https://letterboxd.com/film/zodiac/
