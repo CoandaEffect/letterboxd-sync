@@ -46,6 +46,12 @@ The existing hosted schedule remains
 unchanged. The Downloads handoff is source context; current observations
 govern execution.
 
+The bounded client diagnostic has 28 local tests: 26 passed and two native
+Linux ARM64 checks await CI. Those checks load the native client within the
+256 MiB limit and exercise libcurl against local fixtures. Image publication
+is gated on those checks and the exact offline entrypoint passing. The
+diagnostic uses one selected production browser profile per start, no retry.
+
 ## Next gate
 
 Run the bounded production-client diagnostic on the Green. Inspect its JSON,

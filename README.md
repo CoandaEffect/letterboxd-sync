@@ -33,6 +33,14 @@ Full scheduled scraping needs an allowed outbound network. Configure either:
 
 Without either configuration, the workflow retains its existing hosted-runner default and can still fail with access-denied errors. Runtime/film retries change browser profiles on the same IP; they cannot repair an IP-level block.
 
+## Home Assistant Green diagnostic
+
+The [one-shot ARM64 diagnostic](apps/letterboxd-green-smoke/README.md) tests the
+production HTTP client on the Green before scheduled App deployment. Its image
+is built in GitHub Actions; the Green does not build it or install dependencies.
+Passing the diagnostic is a network/client gate, not a completed deployment or
+a five-day reliability result. Current rollout gates are in [WORK-STATUS.md](WORK-STATUS.md).
+
 ## Local usage
 
 ```bash
