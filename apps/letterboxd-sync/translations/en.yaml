@@ -1,0 +1,29 @@
+configuration:
+  username:
+    name: Letterboxd username
+  github_repository:
+    name: GitHub repository
+  github_token:
+    name: Repository access token
+    description: Dedicated fine-grained token for this repository, with Contents read and write only. Enter it here, never in chat or logs.
+  github_branch:
+    name: Export branch
+  csv_path:
+    name: Export filename
+  schedule:
+    name: Sync schedule (UTC)
+    description: Odd calendar dates at 06:00 UTC. This preserves the existing schedule, including month boundaries.
+  active:
+    name: Start monitored trial
+    description: Starts the five-day observation only after health probes and the phone notification test work. The first four hours keep the scraper idle. Saved trial dates survive restart.
+  approve_first_publish:
+    name: Approve first valid export
+    description: Enable only after reviewing the first candidate and its health measurements. A protective pause still blocks publishing.
+  resume_nonce:
+    name: Reviewed resume request
+    description: After reviewing a protective pause, change this value to request a resume. Healthy probes are still required; this does not reset the trial dates.
+  summary_timezone:
+    name: Daily summary timezone
+  summary_hour:
+    name: Daily summary hour
+    description: Local hour in the selected timezone, from 0 through 23.

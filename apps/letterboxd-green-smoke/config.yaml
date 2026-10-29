@@ -1,0 +1,24 @@
+name: Letterboxd Green network diagnostic
+version: "0.1.2"
+slug: letterboxd_green_smoke
+description: One-shot bounded production-client network check. No sync or scheduling.
+url: https://github.com/coandaeffect/letterboxd-sync/tree/codex/ha-green-app/apps/letterboxd-green-smoke
+arch:
+  - aarch64
+machine:
+  - green
+startup: once
+boot: manual_only
+stage: experimental
+init: true
+image: ghcr.io/coandaeffect/letterboxd-green-smoke
+homeassistant_api: true
+hassio_api: false
+host_network: false
+host_pid: false
+docker_api: false
+ingress: false
+options:
+  profile: chrome
+schema:
+  profile: list(chrome|safari|firefox|safari_ios)

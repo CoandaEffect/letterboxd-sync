@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+.rollout-evidence
+.venv
+venv
+env
+**/__pycache__
+**/*.pyc
+**/*.pyo
+dist
+build

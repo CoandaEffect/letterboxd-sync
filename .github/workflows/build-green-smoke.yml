@@ -1,0 +1,80 @@
+name: Build Green diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: green-diagnostic-publish
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/coandaeffect/letterboxd-green-smoke
+  VERSION: "0.1.2"
+
+jobs:
+  build-test-publish:
+    if: github.repository == 'coandaeffect/letterboxd-sync' && github.ref == 'refs/heads/codex/ha-green-app'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Build preinstalled native ARM64 image
+        run: >-
+          docker build --platform linux/arm64
+          --file apps/letterboxd-green-smoke/Dockerfile
+          --build-arg BUILD_VERSION="$VERSION"
+          --build-arg BUILD_REVISION="$GITHUB_SHA"
+          --tag green-smoke:test .
+      - name: Prepare test evidence
+        run: mkdir -p smoke-results
+      - name: Offline unit tests and native resource-guard test
+        run: >-
+          docker run --rm --platform linux/arm64 --network none --read-only
+          --tmpfs /tmp:rw,nosuid,nodev,noexec,size=16m
+          --memory 256m --memory-swap 256m --pids-limit 32
+          --cap-drop ALL --security-opt no-new-privileges
+          --env EXACT_SMOKE_CONTAINER_TEST=1
+          --entrypoint python green-smoke:test
+          -m unittest discover -s tests -v
+          > smoke-results/unit-tests.txt 2>&1
+      - name: Exercise exact entrypoint offline
+        run: >-
+          docker run --rm --platform linux/arm64 --network none --read-only
+          --memory 256m --memory-swap 256m --pids-limit 32
+          --cap-drop ALL --security-opt no-new-privileges
+          green-smoke:test --offline-self-test
+          > smoke-results/native-startup.json 2> smoke-results/native-startup.stderr
+      - name: Preserve complete test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: green-smoke-offline-tests-${{ github.sha }}
+          path: smoke-results/
+          if-no-files-found: warn
+      - name: Authenticate only after all tests pass
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Reject an existing release tag
+        run: |
+          if docker manifest inspect "$IMAGE:$VERSION" > /dev/null 2>&1
+          then
+            echo "Release tag already exists. Bump config and workflow versions before publishing."
+            exit 1
+          fi
+      - name: Tag tested image
+        run: |
+          docker tag green-smoke:test "$IMAGE:sha-$GITHUB_SHA"
+          docker tag green-smoke:test "$IMAGE:$VERSION"
+      - name: Publish immutable source tag
+        run: docker push "$IMAGE:sha-$GITHUB_SHA"
+      - name: Publish matching App version
+        run: docker push "$IMAGE:$VERSION"
+      - name: Record published manifest
+        run: docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA"
