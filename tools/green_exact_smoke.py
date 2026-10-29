@@ -209,6 +209,12 @@ def main(offline=False, profile=None):
         selected_profile = configured_profile() if profile is None else profile
         if selected_profile not in PROFILES:
             raise ValueError("unsupported_profile")
+        if not offline:
+            sample = probe_core()
+            report["ha_api_samples"].append(sample)
+            if sample["status"] != "ok":
+                report["stopped"] = "ha_api_guard"
+                return report
         factory, report["client"] = load_client(selected_profile)
         session = factory(retry=0, trust_env=False)
         if offline:
@@ -216,11 +222,12 @@ def main(offline=False, profile=None):
             report.update(offline_result="passed", exit_code=0)
             return report
         for kind, url in PAGES.items():
-            sample = probe_core()
-            report["ha_api_samples"].append(sample)
-            if sample["status"] != "ok":
-                report["stopped"] = "ha_api_guard"
-                return report
+            if report["pages"]:
+                sample = probe_core()
+                report["ha_api_samples"].append(sample)
+                if sample["status"] != "ok":
+                    report["stopped"] = "ha_api_guard"
+                    return report
             report["pages"].append(fetch_page(session, kind, url))
             time.sleep(0.25)
         report["ha_api_samples"].append(probe_core())

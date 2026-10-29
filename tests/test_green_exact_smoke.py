@@ -1,10 +1,12 @@
 import contextlib
 import io
+import importlib.util
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import threading
 import unittest
@@ -37,20 +39,22 @@ class Session:
 
 
 class ExactSmokeTests(unittest.TestCase):
-    def run_smoke(self, session=None, probes=None, available=1024, profile=None):
+    def run_smoke(self, session=None, probes=None, available=1024, profile=None, load_error=None,
+                  offline=False):
         session = session or Session()
         probes = probes or [{"status": "ok", "milliseconds": 1}] * 3
         with patch.object(smoke, "guard_resources") as guard, \
              patch.object(smoke.platform, "system", return_value="Linux"), \
              patch.object(smoke.platform, "machine", return_value="aarch64"), \
              patch.object(smoke, "available_mib", return_value=available), \
-             patch.object(smoke, "load_client", return_value=(Mock(return_value=session), {})) as load, \
+             patch.object(smoke, "load_client", return_value=(Mock(return_value=session), {}),
+                          side_effect=load_error) as load, \
              patch.object(smoke, "probe_core", side_effect=probes), \
              patch.object(smoke.time, "sleep"), \
              patch.object(smoke.signal, "alarm"), \
              patch.object(smoke.signal, "signal"), \
              contextlib.redirect_stdout(io.StringIO()) as output:
-            report = smoke.main(profile=profile)
+            report = smoke.main(profile=profile, offline=offline)
         self.assertEqual(json.loads(output.getvalue()), report)
         return report, session, guard, load
 
@@ -86,10 +90,11 @@ class ExactSmokeTests(unittest.TestCase):
 
     def test_failed_or_missing_probe_blocks_and_stops_external_requests(self):
         for status in ("unavailable", "unresponsive", "unexpected_response"):
-            report, session, _, _ = self.run_smoke(probes=[{"status": status}])
+            report, session, _, load = self.run_smoke(probes=[{"status": status}])
             self.assertEqual(report["deployment_gate"], "blocked")
             self.assertEqual(report["stopped"], "ha_api_guard")
             self.assertEqual(session.calls, [])
+            load.assert_not_called()
         report, session, _, _ = self.run_smoke(probes=[{"status": "ok"},
                                                      {"status": "ok"},
                                                      {"status": "unresponsive"}])
@@ -119,12 +124,27 @@ class ExactSmokeTests(unittest.TestCase):
              patch.object(smoke.platform, "system", return_value="Linux"), \
              patch.object(smoke.platform, "machine", return_value="aarch64"), \
              patch.object(smoke, "available_mib", return_value=1024), \
+             patch.object(smoke, "probe_core", side_effect=lambda: order.append("probe") or {"status": "ok"}), \
              patch.object(smoke, "load_client", side_effect=lambda profile: order.append("import")), \
              patch.object(smoke.signal, "signal"), \
              patch.object(smoke.signal, "alarm"), \
              contextlib.redirect_stdout(io.StringIO()):
             smoke.main()
-        self.assertEqual(order, ["guard", "import"])
+        self.assertEqual(order, ["guard", "probe", "import"])
+
+    def test_initial_ha_measurement_survives_native_import_deadline(self):
+        report, _, _, _ = self.run_smoke(load_error=smoke.Deadline())
+        self.assertEqual(report["ha_api_samples"], [{"status": "ok", "milliseconds": 1}])
+        self.assertEqual(report["pages"], [])
+        self.assertEqual(report["stopped"], "time_or_cpu_limit")
+        self.assertEqual(report["deployment_gate"], "blocked")
+
+    def test_offline_run_does_not_probe_ha(self):
+        with patch.object(smoke, "offline_self_test", return_value=[]):
+            report, _, _, _ = self.run_smoke(offline=True)
+        self.assertEqual(report["ha_api_samples"], [])
+        self.assertEqual(report["offline_result"], "passed")
+        self.assertEqual(report["deployment_gate"], "blocked")
 
     def test_guard_sets_memory_cpu_nice_and_wall_deadline(self):
         with patch.object(smoke.os, "nice") as nice, \
@@ -219,6 +239,32 @@ class ExactSmokeTests(unittest.TestCase):
         self.assertLessEqual(report["VmPeak_mib"], 256)
         self.assertEqual(report["ha_api_samples"], [])
         self.assertNotIn("private-canary", completed.stdout + completed.stderr)
+
+    @unittest.skipUnless(sys.platform == "linux" and os.environ.get("EXACT_SMOKE_CONTAINER_TEST") == "1",
+                         "precompiled runtime is verified in the built image")
+    def test_image_has_valid_precompiled_stdlib_dependencies_and_app(self):
+        stdlib = Path(os.__file__).parent
+        sources = [stdlib / relative for relative in
+                   ("json/__init__.py", "urllib/request.py", "platform.py", "argparse.py",
+                    "html/parser.py", "importlib/metadata/__init__.py")]
+        for directory in (Path("/opt/packages"), Path("/app")):
+            self.assertTrue(directory.is_dir())
+            sources.extend(directory.rglob("*.py"))
+        for source in sources:
+            with self.subTest(source=str(source)):
+                cache = Path(importlib.util.cache_from_source(str(source)))
+                self.assertTrue(cache.is_file(), "Missing build-time bytecode: " + str(source))
+                with cache.open("rb") as handle:
+                    header = handle.read(16)
+                self.assertEqual(header[:4], importlib.util.MAGIC_NUMBER)
+                flags = struct.unpack("<I", header[4:8])[0]
+                if flags & 1:
+                    self.assertEqual(header[8:16], importlib.util.source_hash(source.read_bytes()))
+                else:
+                    modified, size = struct.unpack("<II", header[8:16])
+                    self.assertEqual(modified, int(source.stat().st_mtime) & 0xFFFFFFFF)
+                    self.assertEqual(size, source.stat().st_size & 0xFFFFFFFF)
+        print("Verified valid build-time bytecode for", len(sources), "runtime Python files")
 
     @unittest.skipUnless(sys.platform == "linux" and os.environ.get("EXACT_SMOKE_CONTAINER_TEST") == "1",
                          "native transport is verified against CI-only loopback fixtures")

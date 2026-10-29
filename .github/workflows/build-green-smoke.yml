@@ -24,7 +24,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/coandaeffect/letterboxd-green-smoke
-  VERSION: "0.1.0"
+  VERSION: "0.1.1"
 
 jobs:
   build-test-publish:

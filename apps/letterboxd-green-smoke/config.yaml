@@ -1,5 +1,5 @@
 name: Letterboxd Green network diagnostic
-version: "0.1.0"
+version: "0.1.1"
 slug: letterboxd_green_smoke
 description: One-shot bounded production-client network check. No sync or scheduling.
 url: https://github.com/coandaeffect/letterboxd-sync/tree/codex/ha-green-app/apps/letterboxd-green-smoke

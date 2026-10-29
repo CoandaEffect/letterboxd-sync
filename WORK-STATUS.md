@@ -40,17 +40,28 @@ needed. The user authorized continuing through the five-day soak start if the
 network gate passes.
 
 No full App is built or installed; no notifications, MQTT probe, baseline,
-five-day trial, watchdog, or reminder are active. A minimal prebuilt ARM64
-production-client diagnostic is being prepared to resolve the 403 result.
+five-day trial, watchdog, or reminder are active. Only the minimal prebuilt
+ARM64 production-client diagnostic is installed to resolve the 403 result.
 The existing hosted schedule remains
 unchanged. The Downloads handoff is source context; current observations
 govern execution.
 
-The bounded client diagnostic has 28 local tests: 26 passed and two native
-Linux ARM64 checks await CI. Those checks load the native client within the
-256 MiB limit and exercise libcurl against local fixtures. Image publication
-is gated on those checks and the exact offline entrypoint passing. The
-diagnostic uses one selected production browser profile per start, no retry.
+The bounded client diagnostic passed all 28 tests on native ARM64 in CI,
+including guarded native loading and real libcurl loopback fixtures. The
+offline startup peaked at 61.1 MiB virtual memory. Image 0.1.0 was verified
+publicly pullable, with matching source/version digest, then installed on the
+Green. Its boot is manual, watchdog/auto-update off, protection on.
+
+The first exact-client Green start hit the four-second CPU cap during native
+imports, before any HA probes or external page fetches. It exited with the
+deployment gate blocked; this is not evidence of a production-client network
+denial. No limits were increased. The 0.1.1 image precompiles Python bytecode
+in CI and probes HA before native loading, then retests with unchanged limits.
+It has 31 local tests: 28 passed, with three image/native checks reserved for
+CI. Publication remains gated on all checks passing on native ARM64.
+
+The diagnostic uses one selected production browser profile per start, no
+automatic retry. Full App work and the soak remain behind a passing gate.
 
 ## Next gate
 
