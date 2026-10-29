@@ -87,15 +87,23 @@ digest `sha256:3242b20c1d82612822b3be1c206e3c208819cc801ad3ab359daf8d53905bdea6`
 and source `0708b01242993172c8d846ea7ea8fe70bc33ac0e`.
 PR 10 merged as `2ce10fcb5196816ff7be05ddbf584e43999f843d`.
 
-Full App `10132b86_letterboxd_sync` is installed and stopped: active false,
-first-publication approval false, no credential, manual boot, watchdog and
-auto-update off, protection enabled, no host network/PID/Docker access.
-Terra inspected the native Info and Configuration views; the lead viewed both
-captures. Version 0.1.1 is being prepared to keep an unconfigured inactive
-start quiet and expose a safe periodic operational summary in private App logs.
-The expanded suite runs 109 cases locally: 104 pass and five await Linux/native
-execution. Nested status fields are allowlisted; credentials and raw state
-cannot be copied into the operational log.
+Full App `10132b86_letterboxd_sync` 0.1.1 is installed and running inactive:
+first-publication approval false, no credential at verification, manual boot,
+watchdog and auto-update off, protection enabled, no host network/PID/Docker
+access. Terra inspected the native Info and Configuration views; the lead viewed
+both captures before the version update. All 109 tests pass on native ARM64
+in build 40967156167. Image digest is
+`sha256:a78c72ae51a6e57fffcab4716157d135e99aaabc2f215ca8db888c3f3b2be6cc`,
+source `efb51b52e8a242dd3bf45c26536a6ccd45cdfec6`, verified publicly pullable.
+Inactive startup makes no GitHub calls or notifications. Nested operational
+status fields are allowlisted; credentials and raw state are excluded.
+
+Actual Green startup at 22:38:04 UTC: HA 39.9 ms, MQTT round-trip 13.2 ms,
+1748 MiB available host memory, App RSS 24.1 MiB. CPU warmup is explicitly
+missing until a second sample; it is not reported as zero. No incident, worker,
+scheduler, baseline, or trial clock is active. A secure credential-entry handoff
+is pending with the user; leave the native Configuration view untouched while
+they enter it. Never inspect or print the token.
 
 Controlled missing-heartbeat fixture run 40966542158 failed as designed.
 Its exact run link arrived in Gmail with the Inbox label at 22:32 UTC.
@@ -103,8 +111,8 @@ No email, filter, notification preference, or public health record was modified.
 Scheduled watchdog checks remain disabled until the repository activation flag
 is enabled. Phone acceptance and the dedicated GitHub credential are pending.
 
-Next: validate/install 0.1.1, complete secure credential entry, check probes and
-phone acceptance, then start the observation and record its actual timestamps.
+Next: complete secure credential entry, check probes and phone acceptance,
+then start the observation and record its actual timestamps.
 The user explicitly authorized continuing through that start without another
 rollout approval. Full-scrape fit is checked after the four-hour idle baseline;
 first CSV publication remains gated on reviewing that candidate. No baseline,
