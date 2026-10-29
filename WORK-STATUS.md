@@ -4,7 +4,8 @@
 - [x] Fetch current remote branches without changing the working tree.
 - [x] Import the reviewed smoke script and match its handoff SHA-256.
 - [x] Run all 12 existing offline scraper tests and check ARM64 wheel availability.
-- [ ] Run the bounded smoke test on the actual Home Assistant Green.
+- [x] Run the bounded stdlib smoke test on the actual Home Assistant Green.
+- [ ] Resolve the inconclusive stdlib 403 with a bounded production-client test.
 - [ ] Verify the production client on ARM64 under the approved limits.
 - [ ] Implement and test the App, protection, publication, and watchdog.
 - [ ] Install and configure using a dedicated repository credential.
@@ -26,27 +27,29 @@ Binary-only dependency resolution passed for Python 3.12 on ARM64 glibc and
 musl targets. This establishes package availability, not target execution or
 compliance with the approved 256 MiB worker address-space limit.
 
-No actual-Green smoke result exists yet. The HA connector's File editor
-read-only proxy returns HTTP 420, Policy not fulfilled. Chrome browser control
-times out. Browser sign-in was superseded by the authenticated native Home
-Assistant app. Per user preference, native Home Assistant is the default UI
-route and Terra 6.1 owns all computer use.
+The bounded stdlib smoke ran once on the actual Green, after explicit
+action-time confirmation. Architecture was aarch64. Both expected pages
+returned HTTP 403; network_result was inconclusive. All three HA API probes
+passed. File editor reported return code 1. Full measurements and transcription
+provenance are retained in the ignored .rollout-evidence directory.
 
-The exact pinned command is staged and verified in File editor's Execute shell
-command dialog. No command-execution request has been submitted. Computer Use
-requires action-time confirmation to run custom GitHub software; that request
-is pending. No further browser authentication or manual command is needed.
+The authenticated native Home Assistant app resolved the browser sign-in
+blocker. Per user preference, native Home Assistant is the default UI route
+and Terra 6.1 owns all computer use. No further login or manual command is
+needed. The user authorized continuing through the five-day soak start if the
+network gate passes.
 
-No App is built or installed; no notifications, MQTT probe, baseline, five-day
-trial, watchdog, or reminder are active. The existing hosted schedule remains
+No full App is built or installed; no notifications, MQTT probe, baseline,
+five-day trial, watchdog, or reminder are active. A minimal prebuilt ARM64
+production-client diagnostic is being prepared to resolve the 403 result.
+The existing hosted schedule remains
 unchanged. The Downloads handoff is source context; current observations
 govern execution.
 
 ## Next gate
 
-After the pending action-time confirmation, execute the staged, bounded smoke
-command in the native HA app. Inspect the
-JSON, not only the exit code. Required evidence: aarch64 architecture, both
+Run the bounded production-client diagnostic on the Green. Inspect its JSON,
+not only the exit code. Required evidence: aarch64 architecture, both
 film/diary page checks passing, and ha_api_result equal to samples_ok.
 
 A stdlib denial is inconclusive for curl_cffi and requires a bounded test of
