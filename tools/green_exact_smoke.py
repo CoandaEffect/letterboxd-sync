@@ -112,8 +112,10 @@ def fetch_page(session, kind, url):
             result["reason"] = "response_size_limit"
         elif response.status_code != 200:
             result["reason"] = "redirect_rejected" if 300 <= response.status_code < 400 else "http_error"
-        elif any(marker in body.lower() for marker in
-                 (b"<title>just a moment", b"cf-chl-", b"/cdn-cgi/challenge-platform/")):
+        # Cloudflare also injects challenge-platform scripts into ordinary pages.
+        elif (any(name.lower() == "cf-mitigated" and value.strip().lower() == "challenge"
+                  for name, value in response.headers.items())
+              or b"<title>just a moment" in body.lower()):
             result["reason"] = "challenge_response"
         else:
             parser = PageData()
@@ -168,7 +170,7 @@ def offline_self_test(session, profile):
         if kwargs["content_callback"](body) != len(body):
             raise ValueError("fixture_callback_failed")
         calls.append(url)
-        return type("FixtureResponse", (), {"status_code": 200})()
+        return type("FixtureResponse", (), {"status_code": 200, "headers": {}})()
 
     try:
         # Initialize the native handle under the same limits, without any network.

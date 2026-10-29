@@ -60,6 +60,15 @@ in CI and probes HA before native loading, then retests with unchanged limits.
 It has 31 local tests: 28 passed, with three image/native checks reserved for
 CI. Publication remains gated on all checks passing on native ARM64.
 
+Version 0.1.1 passed all 31 native ARM64 checks and was installed. The next
+Green run fit the unchanged limits and received HTTP 200 on both pages, with
+all HA probes healthy. The diagnostic incorrectly rejected normal Cloudflare
+JavaScript-detection scripts before parsing content. Version 0.1.2 corrects
+that false positive using Cloudflare's documented challenge header plus an
+interstitial-title check, and still requires real film/diary rows. It has 33
+local tests, with three image/native checks reserved for CI. A fresh Green
+content result is still required before full App work.
+
 The diagnostic uses one selected production browser profile per start, no
 automatic retry. Full App work and the soak remain behind a passing gate.
 

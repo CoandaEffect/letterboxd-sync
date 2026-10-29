@@ -18,12 +18,14 @@ from tools import green_exact_smoke as smoke
 
 FILMS = b'<ul class="grid"><li data-item-slug="example-film"></li></ul>'
 DIARY = b'<table><tr class="diary-entry-row"></tr></table>'
+JSD = b'<script src="/cdn-cgi/challenge-platform/scripts/jsd/api.js" data-cf-chl-example="1"></script>'
 
 
 class Session:
-    def __init__(self, statuses=(200, 200), bodies=(FILMS, DIARY)):
+    def __init__(self, statuses=(200, 200), bodies=(FILMS, DIARY), headers=({}, {})):
         self.statuses = iter(statuses)
         self.bodies = iter(bodies)
+        self.headers = iter(headers)
         self.calls = []
         self.closed = False
 
@@ -32,7 +34,7 @@ class Session:
         body = next(self.bodies)
         if kwargs["content_callback"](body) != len(body):
             raise RuntimeError("untrusted request detail")
-        return Mock(status_code=next(self.statuses))
+        return Mock(status_code=next(self.statuses), headers=next(self.headers))
 
     def close(self):
         self.closed = True
@@ -73,6 +75,23 @@ class ExactSmokeTests(unittest.TestCase):
             report, _, _, _ = self.run_smoke(session)
             self.assertEqual(report["deployment_gate"], "blocked")
             self.assertFalse(report["pages"][0]["passed"])
+
+    def test_benign_cloudflare_javascript_still_requires_and_counts_expected_content(self):
+        report, _, _, _ = self.run_smoke(Session(bodies=(FILMS + JSD, DIARY + JSD)))
+        self.assertEqual(report["deployment_gate"], "passed")
+        self.assertEqual([page["entries"] for page in report["pages"]], [1, 1])
+        report, _, _, _ = self.run_smoke(Session(bodies=(JSD, JSD)))
+        self.assertEqual(report["deployment_gate"], "blocked")
+        self.assertEqual([page["reason"] for page in report["pages"]],
+                         ["no_expected_page_data", "no_expected_page_data"])
+
+    def test_challenge_header_blocks_even_with_expected_nodes_and_handles_header_case(self):
+        for name, value in (("cf-mitigated", "challenge"), ("Cf-Mitigated", " ChAlLeNgE ")):
+            with self.subTest(name=name):
+                report, _, _, _ = self.run_smoke(Session(headers=({name: value}, {name: value})))
+                self.assertEqual(report["deployment_gate"], "blocked")
+                self.assertEqual([page["reason"] for page in report["pages"]],
+                                 ["challenge_response", "challenge_response"])
 
     def test_request_is_bounded_has_no_credentials_and_is_not_retried(self):
         session = Session(bodies=(b"x" * (smoke.RESPONSE_LIMIT + 1), DIARY))
@@ -279,6 +298,10 @@ class ExactSmokeTests(unittest.TestCase):
                 status, body = 200, FILMS
                 if self.path == "/diary":
                     body = DIARY
+                elif self.path == "/films-jsd":
+                    body = FILMS + JSD
+                elif self.path == "/diary-jsd":
+                    body = DIARY + JSD
                 elif self.path == "/oversized":
                     body = b"x" * (smoke.RESPONSE_LIMIT + 65536)
                 elif self.path == "/redirect":
@@ -289,6 +312,8 @@ class ExactSmokeTests(unittest.TestCase):
                     body = b"<title>Just a moment...</title>" + FILMS
                 self.send_response(status)
                 self.send_header("Content-Length", str(len(body)))
+                if self.path == "/challenge-header":
+                    self.send_header("Cf-MiTiGaTeD", " ChAlLeNgE ")
                 if status == 302:
                     self.send_header("Location", "/must-not-follow")
                 self.end_headers()
@@ -317,8 +342,9 @@ class ExactSmokeTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         report = json.loads(completed.stdout)
         self.assertLessEqual(report["VmPeak_mib"], 256)
-        self.assertEqual(hits, ["/films", "/diary", "/oversized", "/redirect", "/forbidden", "/challenge"])
-        self.assertEqual(credentials, [None] * 6)
+        self.assertEqual(hits, ["/films", "/diary", "/films-jsd", "/diary-jsd", "/oversized",
+                               "/redirect", "/forbidden", "/challenge", "/challenge-header"])
+        self.assertEqual(credentials, [None] * 9)
         self.assertNotIn("private-canary", completed.stdout + completed.stderr)
 
 

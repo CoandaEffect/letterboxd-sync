@@ -19,14 +19,19 @@ def main():
     try:
         pages = {path: smoke.fetch_page(session, kind, base + path)
                  for path, kind in (("/films", "films"), ("/diary", "diary"),
+                                    ("/films-jsd", "films"), ("/diary-jsd", "diary"),
                                     ("/oversized", "films"), ("/redirect", "films"),
-                                    ("/forbidden", "films"), ("/challenge", "films"))}
+                                    ("/forbidden", "films"), ("/challenge", "films"),
+                                    ("/challenge-header", "films"))}
         assert pages["/films"]["passed"] and pages["/diary"]["passed"]
+        assert pages["/films-jsd"]["passed"] and pages["/films-jsd"]["entries"] == 1
+        assert pages["/diary-jsd"]["passed"] and pages["/diary-jsd"]["entries"] == 1
         assert pages["/oversized"]["reason"] == "response_size_limit"
         assert pages["/oversized"]["response_bytes"] <= smoke.RESPONSE_LIMIT
         assert pages["/redirect"]["reason"] == "redirect_rejected"
         assert pages["/forbidden"]["reason"] == "http_error"
         assert pages["/challenge"]["reason"] == "challenge_response"
+        assert pages["/challenge-header"]["reason"] == "challenge_response"
         print(json.dumps({"pages": pages, "client": versions, **smoke.proc_memory()}))
     finally:
         session.close()
