@@ -28,8 +28,14 @@ compliance with the approved 256 MiB worker address-space limit.
 
 No actual-Green smoke result exists yet. The HA connector's File editor
 read-only proxy returns HTTP 420, Policy not fulfilled. Chrome browser control
-times out. Native Dia control works, but HA's normal login requires user
-authentication. No command-execution request has been submitted.
+times out. Browser sign-in was superseded by the authenticated native Home
+Assistant app. Per user preference, native Home Assistant is the default UI
+route and Terra 6.1 owns all computer use.
+
+The exact pinned command is staged and verified in File editor's Execute shell
+command dialog. No command-execution request has been submitted. Computer Use
+requires action-time confirmation to run custom GitHub software; that request
+is pending. No further browser authentication or manual command is needed.
 
 No App is built or installed; no notifications, MQTT probe, baseline, five-day
 trial, watchdog, or reminder are active. The existing hosted schedule remains
@@ -38,8 +44,8 @@ govern execution.
 
 ## Next gate
 
-After normal HA sign-in, open File editor's Execute shell command UI and run
-the commit-pinned, bounded smoke command supplied in the handoff. Inspect the
+After the pending action-time confirmation, execute the staged, bounded smoke
+command in the native HA app. Inspect the
 JSON, not only the exit code. Required evidence: aarch64 architecture, both
 film/diary page checks passing, and ha_api_result equal to samples_ok.
 
