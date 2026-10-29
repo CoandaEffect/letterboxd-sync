@@ -98,6 +98,12 @@ includes the candidate summary, last sample, baseline coverage, and notification
 delivery state. It never prints the repository token. Offline `--self-check`
 does not start a trial or fetch Letterboxd.
 
+The App also writes an allowlisted `status` JSON event to its normal HA logs
+at startup, every 15 minutes, and when worker results or the first candidate
+are ready. This includes measured worker peaks and baseline coverage, without
+needing shell access. Unconfigured inactive startup samples local health and
+logs status but makes no GitHub calls or notifications.
+
 To stop this rollout, stop the App and disable start on boot. Disable the
 watchdog repository variable, and remove only the dedicated health echo
 automation and App if desired. Preserve `/data` for diagnosis before uninstalling.

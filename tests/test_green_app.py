@@ -118,6 +118,97 @@ class RuntimeTests(unittest.TestCase):
         self.assertIsNone(self.coordinator.state["trial_started_at"])
         self.worker.start.assert_not_called()
 
+    def test_default_unconfigured_inactive_startup_only_records_local_sample(self):
+        self.config.github_token = ""
+        missing = sample(ha_ms=None, mqtt_ms=None)
+        for minute in range(3):
+            self.coordinator.tick(NOW + timedelta(minutes=minute), missing)
+        self.assertEqual(self.github.mock_calls, [])
+        self.local.notify.assert_not_called()
+        self.worker.start.assert_not_called()
+        self.assertIsNone(self.coordinator.state["trial_started_at"])
+        self.assertFalse(self.coordinator.state["scheduler_enabled"])
+        self.assertEqual(self.coordinator.state["incidents"], {})
+        self.assertEqual(self.coordinator.store.load()["last_sample"], missing)
+
+    def test_active_without_github_token_keeps_failure_visibility(self):
+        self.config.github_token = ""
+        self.config.active = True
+        self.github.fetch_export.side_effect = OSError("unauthorized")
+        self.github.heartbeat.side_effect = OSError("unauthorized")
+        self.coordinator.tick(NOW, sample())
+        self.github.heartbeat.assert_called_once()
+        self.local.notify.assert_called()
+        self.assertIn("heartbeat_publish_failed", self.coordinator.state["incidents"])
+        self.assertIsNone(self.coordinator.state["trial_started_at"])
+
+    def test_existing_trial_without_token_keeps_failure_visibility_when_inactive(self):
+        self.config.github_token = ""
+        self.github.heartbeat.side_effect = OSError("unauthorized")
+        self.coordinator.state.update(trial_started_at=NOW.isoformat(),
+            trial_ends_at=(NOW + timedelta(days=5)).isoformat(),
+            baseline_ends_at=(NOW + timedelta(hours=4)).isoformat(),
+            next_due_at=(NOW + timedelta(hours=4)).isoformat())
+        self.coordinator.tick(NOW, sample())
+        self.github.heartbeat.assert_called_once()
+        self.local.notify.assert_called()
+        self.assertIn("heartbeat_publish_failed", self.coordinator.state["incidents"])
+        self.assertEqual(self.coordinator.state["trial_started_at"], NOW.isoformat())
+
+    def test_configured_inactive_startup_may_publish_health(self):
+        self.coordinator.tick(NOW, sample())
+        self.github.heartbeat.assert_called_once()
+        self.local.notify.assert_not_called()
+
+    def test_private_status_log_allowlists_nested_fields_without_secret_canary(self):
+        canary = "SECRET_CANARY_DO_NOT_LOG"
+        self.config.github_token = ""
+        self.coordinator.state.update(options={"token": canary}, environment={"SUPERVISOR_TOKEN": canary},
+            baseline_samples=[{"secret": canary}], outcomes=[{"private": canary}],
+            candidate_summary={"films": 365, "sha256": "a" * 64, "private": canary},
+            worker_result={"ok": True, "duration_seconds": 12, "private": canary,
+                           "memory": {"VmPeak_mib": 59.9, "private": canary}},
+            baseline_coverage={"expected_minutes": 240, "valid_minutes": 1,
+                               "missing_minutes": list(range(1, 240)), "private": canary},
+            baseline_p95={"ha_ms": 400, "mqtt_ms": 20, "private": canary})
+        measured = sample(private=canary, app_memory={"VmRSS_mib": 20, "private": canary})
+        self.coordinator.tick(NOW, measured)
+        text = (self.path / "events.jsonl").read_text()
+        self.assertNotIn(canary, text)
+        record = [json.loads(line) for line in text.splitlines() if json.loads(line)["code"] == "status"][0]
+        status = record["status"]
+        self.assertEqual(status["phase"], "startup")
+        self.assertEqual(status["candidate_summary"]["films"], 365)
+        self.assertEqual(status["worker_result"]["memory"]["VmPeak_mib"], 59.9)
+        self.assertEqual(status["last_sample"]["app_memory"], {"VmRSS_mib": 20})
+        self.assertNotIn("outcomes", status)
+        self.github.heartbeat.assert_not_called()
+        self.local.notify.assert_not_called()
+
+    def test_private_status_log_cadence_survives_coordinator_restart(self):
+        self.config.github_token = ""
+        self.coordinator.tick(NOW, sample())
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        replacement.tick(NOW + timedelta(minutes=14), sample())
+        replacement.tick(NOW + timedelta(minutes=15), sample())
+        records = [json.loads(line) for line in (self.path / "events.jsonl").read_text().splitlines()]
+        self.assertEqual([record["at"] for record in records if record["code"] == "status"],
+                         [NOW.isoformat(), (NOW + timedelta(minutes=15)).isoformat()])
+
+    def test_first_candidate_logs_immediate_status_even_between_periodic_logs(self):
+        self.config.github_token = ""
+        self.coordinator.tick(NOW, sample())
+        self.coordinator.state["reference_sha"] = "same"
+        self.coordinator.state["worker_result"] = {"ok": True, "memory": {"VmPeak_mib": 60}}
+        (self.path / "worker").mkdir()
+        (self.path / "worker" / "candidate.csv").write_bytes(CSV)
+        self.coordinator.finish_candidate(NOW + timedelta(minutes=1))
+        records = [json.loads(line) for line in (self.path / "events.jsonl").read_text().splitlines()]
+        statuses = [record["status"] for record in records if record["code"] == "status"]
+        self.assertEqual(len(statuses), 2)
+        self.assertEqual(statuses[-1]["candidate_summary"]["films"], 1)
+        self.assertEqual(statuses[-1]["worker_result"]["memory"]["VmPeak_mib"], 60)
+
     def test_clock_requires_warmed_metrics_and_notification_acceptance(self):
         self.config.active = True
         self.local.notify.return_value = False

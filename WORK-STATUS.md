@@ -7,8 +7,9 @@
 - [x] Run the bounded stdlib smoke test on the actual Home Assistant Green.
 - [x] Resolve the inconclusive stdlib 403 with a bounded production-client test.
 - [x] Verify the production client on ARM64 under the approved limits.
-- [ ] Implement and test the App, protection, publication, and watchdog.
-- [ ] Install and configure using a dedicated repository credential.
+- [x] Implement and test the App, protection, publication, and watchdog.
+- [x] Install the prebuilt App inactive with protection enabled.
+- [ ] Configure the dedicated repository credential securely.
 - [ ] Exercise phone/email alerts and start the four-hour idle baseline.
 - [ ] Validate and publish the first full Green export.
 - [ ] Retire the hosted schedule after acceptance gates pass.
@@ -39,12 +40,9 @@ and Terra 6.1 owns all computer use. No further login or manual command is
 needed. The user authorized continuing through the five-day soak start if the
 network gate passes.
 
-No full App is built or installed; no notifications, MQTT probe, baseline,
-five-day trial, watchdog, or reminder are active. Only the minimal prebuilt
-ARM64 production-client diagnostic is installed to resolve the 403 result.
-The existing hosted schedule remains
-unchanged. The Downloads handoff is source context; current observations
-govern execution.
+At the original handoff, no full App or monitoring was active. The staged
+diagnostic resolved the network/client gate before full implementation.
+The Downloads handoff is source context; current observations govern execution.
 
 The bounded client diagnostic passed all 28 tests on native ARM64 in CI,
 including guarded native loading and real libcurl loopback fixtures. The
@@ -82,14 +80,43 @@ automatic retry. Full App work and the soak remain behind a passing gate.
 
 ## Next gate
 
-Build and test the complete App on native ARM64, verify its public image,
-and install it inactive. Independent runtime and package review is clear.
-The current suite runs 102 tests locally: 97 pass and five Linux/native checks
-are reserved for the image build. The release guard requires an authenticated
-registry 404 before permitting a new version, and stops on other lookup errors.
-The App remains inactive until its dedicated repository credential and alert
-checks are ready. Full-scrape fit is checked after the four-hour idle baseline;
-first CSV publication remains gated on reviewing that candidate.
+Version 0.1.0 passed all 102 tests on native ARM64, including actual resource
+enforcement and packaged native imports. Build 40966271593 published image
+`ghcr.io/coandaeffect/letterboxd-sync-green`, verified anonymously pullable with
+digest `sha256:3242b20c1d82612822b3be1c206e3c208819cc801ad3ab359daf8d53905bdea6`
+and source `0708b01242993172c8d846ea7ea8fe70bc33ac0e`.
+PR 10 merged as `2ce10fcb5196816ff7be05ddbf584e43999f843d`.
+
+Full App `10132b86_letterboxd_sync` 0.1.1 is installed and running inactive:
+first-publication approval false, no credential at verification, manual boot,
+watchdog and auto-update off, protection enabled, no host network/PID/Docker
+access. Terra inspected the native Info and Configuration views; the lead viewed
+both captures before the version update. All 109 tests pass on native ARM64
+in build 40967156167. Image digest is
+`sha256:a78c72ae51a6e57fffcab4716157d135e99aaabc2f215ca8db888c3f3b2be6cc`,
+source `efb51b52e8a242dd3bf45c26536a6ccd45cdfec6`, verified publicly pullable.
+Inactive startup makes no GitHub calls or notifications. Nested operational
+status fields are allowlisted; credentials and raw state are excluded.
+
+Actual Green startup at 22:38:04 UTC: HA 39.9 ms, MQTT round-trip 13.2 ms,
+1748 MiB available host memory, App RSS 24.1 MiB. CPU warmup is explicitly
+missing until a second sample; it is not reported as zero. No incident, worker,
+scheduler, baseline, or trial clock is active. A secure credential-entry handoff
+is pending with the user; leave the native Configuration view untouched while
+they enter it. Never inspect or print the token.
+
+Controlled missing-heartbeat fixture run 40966542158 failed as designed.
+Its exact run link arrived in Gmail with the Inbox label at 22:32 UTC.
+No email, filter, notification preference, or public health record was modified.
+Scheduled watchdog checks remain disabled until the repository activation flag
+is enabled. Phone acceptance and the dedicated GitHub credential are pending.
+
+Next: complete secure credential entry, check probes and phone acceptance,
+then start the observation and record its actual timestamps.
+The user explicitly authorized continuing through that start without another
+rollout approval. Full-scrape fit is checked after the four-hour idle baseline;
+first CSV publication remains gated on reviewing that candidate. No baseline,
+five-day clock, day-five reminder, or unattended Green publisher is active yet.
 
 The dedicated non-actuating MQTT echo automation is installed and read back:
 `automation.letterboxd_sync_health_echo`, unique ID `1793312579423`.

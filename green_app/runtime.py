@@ -202,6 +202,39 @@ class Coordinator:
         with (self.directory / "events.jsonl").open("a") as handle:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
 
+    def log_status(self, now, force=False):
+        last = instant(self.state.get("status_logged_at"))
+        if last and (now == last or not force and now - last < timedelta(minutes=15)):
+            return
+
+        def select(value, keys):
+            return {key: value[key] for key in keys if key in value} if isinstance(value, dict) else None
+
+        def memory(value):
+            return select(value, ("VmRSS_mib", "VmPeak_mib", "VmSize_mib"))
+
+        state = self.state
+        status = public_health(state, now, bool(state["trial_started_at"]))
+        status["candidate_summary"] = select(state.get("candidate_summary"), (
+            "at", "films", "previous_films", "new_films", "dated_films", "lost_dates", "sha256", "resource_check"))
+        worker = state.get("worker_result")
+        status["worker_result"] = select(worker, ("ok", "error", "duration_seconds", "cpu_seconds"))
+        if status["worker_result"] is not None:
+            status["worker_result"]["memory"] = memory(worker.get("memory"))
+        measured = state.get("last_sample")
+        status["last_sample"] = select(measured, ("at", "cpu_percent", "available_mib", "ha_ms", "mqtt_ms"))
+        if status["last_sample"] is not None:
+            for key in ("app_memory", "worker_memory"):
+                status["last_sample"][key] = memory(measured.get(key))
+        status["baseline_coverage"] = select(state.get("baseline_coverage"), (
+            "expected_minutes", "valid_minutes", "missing_minutes"))
+        status["baseline_p95"] = select(state.get("baseline_p95"), ("ha_ms", "mqtt_ms"))
+        status["notification_test_accepted"] = bool(state["notification_test_accepted"])
+        status["notification_failure"] = bool(state.get("notification_failure", False))
+        state["status_logged_at"] = now.isoformat()
+        self.store.save(state)
+        self.event("status", now, status=status)
+
     def incident(self, code, now):
         if code in self.state["incidents"] and not self.state["incidents"][code].get("active", True):
             self.state["incidents"][code] = {"started_at": now.isoformat(), "notified": False}
@@ -350,6 +383,7 @@ class Coordinator:
             if not self.state["first_published"] and not self.config.approve_first_publish:
                 self.state.update(candidate_pending=True, phase="idle", worker_inflight=False)
                 self.event("first_candidate_review_required", now, **{k: v for k, v in summary.items() if k != "at"})
+                self.log_status(now, force=True)
                 self.store.save(self.state)
                 return
             if candidate != current:
@@ -421,8 +455,14 @@ class Coordinator:
             self.incident("heartbeat_publish_failed", now)
 
     def tick(self, now, sample):
+        """Keep unconfigured startup local; configured inactive startup may publish health."""
         self.state["last_sample"] = sample
         self.state["scheduler_enabled"] = False
+        force_status = False
+        if not self.config.active and not self.state["trial_started_at"] and not self.config.github_token:
+            self.log_status(now)
+            self.store.save(self.state)
+            return
         if (self.state["pause"] and self.config.resume_nonce and
                 self.state.get("worker_cleanup_verified") is not False and
                 self.config.resume_nonce != self.state.get("pause_resume_nonce", "") and self.ready(sample)):
@@ -463,6 +503,7 @@ class Coordinator:
             if self.state.get("worker_inflight") and not self.state["pause"]:
                 result = self.worker.completed()
                 if result is not None:
+                    force_status = True
                     self.state["worker_result"] = result
                     self.state["worker_inflight"] = False
                     if result.get("ok") and self.ready(sample):
@@ -497,6 +538,7 @@ class Coordinator:
             elif incident.get("recovery_pending"):
                 self.recover(code, now)
         self.heartbeat(now)
+        self.log_status(now, force=force_status)
         self.store.save(self.state)
 
     def shutdown(self):

@@ -1,5 +1,5 @@
 name: Letterboxd Sync
-version: "0.1.0"
+version: "0.1.1"
 slug: letterboxd_sync
 description: Guarded sync with health monitoring and a four-hour idle baseline.
 url: https://github.com/CoandaEffect/letterboxd-sync/tree/codex/ha-green-app/apps/letterboxd-sync
