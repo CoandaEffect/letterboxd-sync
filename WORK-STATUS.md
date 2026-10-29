@@ -5,8 +5,8 @@
 - [x] Import the reviewed smoke script and match its handoff SHA-256.
 - [x] Run all 12 existing offline scraper tests and check ARM64 wheel availability.
 - [x] Run the bounded stdlib smoke test on the actual Home Assistant Green.
-- [ ] Resolve the inconclusive stdlib 403 with a bounded production-client test.
-- [ ] Verify the production client on ARM64 under the approved limits.
+- [x] Resolve the inconclusive stdlib 403 with a bounded production-client test.
+- [x] Verify the production client on ARM64 under the approved limits.
 - [ ] Implement and test the App, protection, publication, and watchdog.
 - [ ] Install and configure using a dedicated repository credential.
 - [ ] Exercise phone/email alerts and start the four-hour idle baseline.
@@ -66,22 +66,35 @@ all HA probes healthy. The diagnostic incorrectly rejected normal Cloudflare
 JavaScript-detection scripts before parsing content. Version 0.1.2 corrects
 that false positive using Cloudflare's documented challenge header plus an
 interstitial-title check, and still requires real film/diary rows. It has 33
-local tests, with three image/native checks reserved for CI. A fresh Green
-content result is still required before full App work.
+local tests, with three image/native checks reserved for CI.
+
+Version 0.1.2 passed all 33 native ARM64 checks. Its fresh actual-Green run
+passed: 72 films and 50 diary entries parsed from the expected page-two URLs,
+both HTTP 200; all three HA API probes healthy; exit code 0. Peak virtual
+memory was 59.9 MiB, peak resident memory 44.1 MiB, CPU 3.383 seconds, wall
+time 3.92 seconds. The same limits were retained. The diagnostic is stopped,
+manual boot, watchdog off. Terra verified the native UI and the lead viewed
+the latest result screenshot. Full App implementation is now authorized to
+proceed. No four-hour baseline or five-day soak has started yet.
 
 The diagnostic uses one selected production browser profile per start, no
 automatic retry. Full App work and the soak remain behind a passing gate.
 
 ## Next gate
 
-Run the bounded production-client diagnostic on the Green. Inspect its JSON,
-not only the exit code. Required evidence: aarch64 architecture, both
-film/diary page checks passing, and ha_api_result equal to samples_ok.
+Build and test the complete App on native ARM64, verify its public image,
+and install it inactive. Independent runtime and package review is clear.
+The current suite runs 102 tests locally: 97 pass and five Linux/native checks
+are reserved for the image build. The release guard requires an authenticated
+registry 404 before permitting a new version, and stops on other lookup errors.
+The App remains inactive until its dedicated repository credential and alert
+checks are ready. Full-scrape fit is checked after the four-hour idle baseline;
+first CSV publication remains gated on reviewing that candidate.
 
-A stdlib denial is inconclusive for curl_cffi and requires a bounded test of
-the production client. A successful smoke is not proof of full-scrape memory
-fit, publication, alerts, or long-term automation responsiveness. Full App work
-remains behind this gate.
+The dedicated non-actuating MQTT echo automation is installed and read back:
+`automation.letterboxd_sync_health_echo`, unique ID `1793312579423`.
+It echoes only between `letterboxd_sync/health/request` and
+`letterboxd_sync/health/response`, QoS 0, retain false. It controls no devices.
 
 ## Preflight sources
 

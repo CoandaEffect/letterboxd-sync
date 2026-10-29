@@ -1,0 +1,47 @@
+name: Letterboxd Sync
+version: "0.1.0"
+slug: letterboxd_sync
+description: Guarded sync with health monitoring and a four-hour idle baseline.
+url: https://github.com/CoandaEffect/letterboxd-sync/tree/codex/ha-green-app/apps/letterboxd-sync
+arch:
+  - aarch64
+machine:
+  - green
+startup: application
+boot: manual
+stage: experimental
+init: true
+timeout: 30
+image: ghcr.io/coandaeffect/letterboxd-sync-green
+homeassistant_api: true
+hassio_api: false
+services:
+  - mqtt:need
+host_network: false
+host_pid: false
+docker_api: false
+ingress: false
+options:
+  username: coanda_effect
+  github_repository: CoandaEffect/letterboxd-sync
+  github_token: ""
+  github_branch: main
+  csv_path: letterboxd-watched.csv
+  schedule: "0 6 */2 * *"
+  active: false
+  resume_nonce: ""
+  approve_first_publish: false
+  summary_timezone: America/Denver
+  summary_hour: 18
+schema:
+  username: str
+  github_repository: str
+  github_token: password
+  github_branch: str
+  csv_path: str
+  schedule: "list(0 6 */2 * *)"
+  active: bool
+  resume_nonce: str
+  approve_first_publish: bool
+  summary_timezone: str
+  summary_hour: "int(0,23)"

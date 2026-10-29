@@ -244,7 +244,7 @@ class ExactSmokeTests(unittest.TestCase):
                          "native Linux ARM64 guard is verified in the container build")
     def test_native_offline_startup_enforces_256_mib_before_import(self):
         completed = subprocess.run(
-            ["/app/run.sh", "--offline-self-test"],
+            [sys.executable, "-m", "tools.green_exact_smoke", "--offline-self-test"],
             cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=16,
             env={**os.environ, "HTTP_PROXY": "http://127.0.0.1:1", "SUPERVISOR_TOKEN": "private-canary"},
         )

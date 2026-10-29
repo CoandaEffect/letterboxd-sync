@@ -1,17 +1,6 @@
 name: Build Green diagnostic
 
 on:
-  push:
-    branches: [codex/ha-green-app]
-    paths:
-      - apps/letterboxd-green-smoke/**
-      - tools/green_exact_smoke.py
-      - tools/green_smoke.py
-      - scrape.py
-      - tests/**
-      - requirements.txt
-      - .dockerignore
-      - .github/workflows/build-green-smoke.yml
   workflow_dispatch:
 
 permissions:

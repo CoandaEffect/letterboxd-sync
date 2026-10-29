@@ -1,0 +1,93 @@
+name: Build Green Sync App
+
+on:
+  push:
+    branches: [codex/ha-green-app]
+    paths:
+      - apps/letterboxd-sync/**
+      - green_app/**
+      - tools/**
+      - tests/**
+      - scrape.py
+      - requirements.txt
+      - .dockerignore
+      - .github/workflows/build-green-app.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: green-sync-app-publish
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/coandaeffect/letterboxd-sync-green
+  VERSION: "0.1.0"
+
+jobs:
+  build-test-publish:
+    if: github.repository == 'CoandaEffect/letterboxd-sync' && github.ref == 'refs/heads/codex/ha-green-app'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Build preinstalled native ARM64 image
+        run: >-
+          docker build --platform linux/arm64
+          --file apps/letterboxd-sync/Dockerfile
+          --build-arg BUILD_VERSION="$VERSION"
+          --build-arg BUILD_REVISION="$GITHUB_SHA"
+          --tag green-sync:test .
+      - name: Prepare complete test evidence
+        run: mkdir -p app-test-results
+      - name: Offline tests and actual native worker guards
+        run: >-
+          docker run --rm --platform linux/arm64 --network none --read-only
+          --tmpfs /tmp:rw,nosuid,nodev,noexec,size=32m
+          --tmpfs /data:rw,nosuid,nodev,noexec,size=32m
+          --memory 512m --memory-swap 512m --pids-limit 64
+          --env EXACT_SMOKE_CONTAINER_TEST=1 --env GREEN_APP_CONTAINER_TEST=1
+          --entrypoint python green-sync:test
+          -m unittest discover -s tests -v
+          > app-test-results/unit-tests.txt 2>&1
+      - name: Coordinator offline startup
+        run: >-
+          docker run --rm --platform linux/arm64 --network none --read-only
+          --memory 512m --memory-swap 512m --pids-limit 64
+          green-sync:test --self-check
+          > app-test-results/coordinator-startup.json 2> app-test-results/coordinator-startup.stderr
+      - name: Worker offline startup under production limits
+        run: >-
+          docker run --rm --platform linux/arm64 --network none --read-only
+          --memory 512m --memory-swap 512m --pids-limit 64
+          --entrypoint python green-sync:test -m green_app.worker --self-check
+          > app-test-results/worker-startup.json 2> app-test-results/worker-startup.stderr
+      - name: Preserve complete validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: green-app-tests-${{ github.sha }}
+          path: app-test-results/
+          if-no-files-found: warn
+      - name: Authenticate only after validation passes
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Refuse an existing release tag
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/check_image_release.py "$IMAGE" "$VERSION"
+      - name: Tag validated image
+        run: |
+          docker tag green-sync:test "$IMAGE:sha-$GITHUB_SHA"
+          docker tag green-sync:test "$IMAGE:$VERSION"
+      - name: Publish immutable source image
+        run: docker push "$IMAGE:sha-$GITHUB_SHA"
+      - name: Publish matching App version
+        run: docker push "$IMAGE:$VERSION"
+      - name: Record manifest
+        run: docker buildx imagetools inspect "$IMAGE:sha-$GITHUB_SHA"

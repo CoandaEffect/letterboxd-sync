@@ -41,10 +41,16 @@ is built in GitHub Actions; the Green does not build it or install dependencies.
 Passing the diagnostic is a network/client gate, not a completed deployment or
 a five-day reliability result. Current rollout gates are in [WORK-STATUS.md](WORK-STATUS.md).
 
+The [guarded Green App](apps/letterboxd-sync/README.md) adds a four-hour idle
+baseline, isolated resource-limited worker, phone alerts, and a separate GitHub
+health watchdog. It starts inactive and holds its first candidate for review.
+The hosted schedule remains active until the Green's first validated publication
+and alert checks pass.
+
 ## Local usage
 
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 python scrape.py
 ```
 
