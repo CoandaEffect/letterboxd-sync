@@ -9,7 +9,7 @@ COPY green_app/requirements.txt /build/green-app-requirements.txt
 RUN uv pip install --target=/opt/packages --only-binary=:all: --compile-bytecode --no-cache -r /build/requirements.txt -r /build/green-app-requirements.txt
 
 FROM base AS runtime
-ARG BUILD_VERSION=0.1.0
+ARG BUILD_VERSION=0.1.1
 ARG BUILD_REVISION
 LABEL io.hass.version="${BUILD_VERSION}" \
       io.hass.type="app" \
