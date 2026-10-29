@@ -4,15 +4,23 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 6 */2 * *"  # Every other day at 6 AM UTC (midnight Mountain)
+    - cron: "0 6 */2 * *"  # Odd-numbered days at 6 AM UTC; GitHub may delay runs
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: letterboxd-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # Linux/Azure runner IPs were blocked on every run from Oct 15–27.
+    # Use a separate hosted runner pool instead of rotating fingerprints
+    # repeatedly behind the same blocked IP.
+    runs-on: macos-15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -24,7 +32,13 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Scrape Letterboxd
-        run: python scrape.py
+        run: python -u scrape.py
+
+      - name: Summarize failure
+        if: failure()
+        run: |
+          echo '::error::Letterboxd sync failed. The existing CSV has been preserved. Check this run for the failing request.'
+          echo 'Sync failed. Check the failed step above. GitHub Actions failure emails may be filtered as spam; allow notifications@github.com in your mail settings.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push if changed
         run: |

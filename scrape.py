@@ -3,12 +3,16 @@
 
 import csv
 import os
+from pathlib import Path
+import tempfile
 import time
 
 from curl_cffi import requests as curl_requests
 from letterboxdpy.core.exceptions import AccessDeniedError
 from letterboxdpy.core.scraper import Scraper
-from letterboxdpy.user import User
+from letterboxdpy.pages.user_diary import UserDiary
+from letterboxdpy.pages.user_films import UserFilms
+from letterboxdpy.url import FilmURL
 
 USERNAME = os.environ.get("LETTERBOXD_USERNAME", "coanda_effect")
 OUTPUT_FILE = os.environ.get("OUTPUT_FILE", "letterboxd-watched.csv")
@@ -61,23 +65,28 @@ def build_diary_lookup(diary_data):
     return diary_by_slug
 
 
-def scrape():
+def read_previous_rows():
+    if not Path(OUTPUT_FILE).exists():
+        return []
+    with open(OUTPUT_FILE, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def scrape(previous_rows):
     """Fetch films and diary data, returning CSV rows."""
-    user = User(USERNAME)
-    films_data = user.get_films()
+    # These page clients do not fetch the unrelated profile, favorites, etc.
+    films_data = UserFilms(USERNAME).get_films()
     movies = films_data.get("movies", {})
     print(f"  Found {len(movies)} films")
 
-    try:
-        diary_data = user.pages.diary.get_diary(fetch_runtime=True)
-        diary_entries = diary_data if isinstance(diary_data, dict) else {}
-        print(f"  Found {len(diary_entries.get('entries', {}))} diary entries")
-    except AccessDeniedError:
-        # Don't write a CSV stripped of watch dates; let the caller retry.
-        raise
-    except Exception as e:
-        print(f"  Warning: could not fetch diary: {e}")
-        diary_entries = {}
+    # Any diary failure must fail the sync, not erase every watch date.
+    # Reuse known runtimes rather than requesting every diary film each run.
+    diary_entries = UserDiary(USERNAME).get_diary(fetch_runtime=False)
+    print(f"  Found {len(diary_entries['entries'])} diary entries")
+    known_runtimes = {
+        row["Letterboxd URI"]: row["Runtime"]
+        for row in previous_rows if row.get("Runtime")
+    }
 
     diary_by_slug = build_diary_lookup(diary_entries)
 
@@ -86,47 +95,90 @@ def scrape():
         diary = diary_by_slug.get(slug, {})
         actions = diary.get("actions", {})
         rating = info.get("rating")
+        uri = f"https://letterboxd.com/film/{slug}/"
+        runtime = diary.get("runtime") or known_runtimes.get(uri, "")
+        if diary and not runtime:
+            runtime = FilmURL.json(slug).run_time or ""
         rows.append({
             "Name": info["name"],
             "Year": info.get("year", ""),
             "Rating": rating if rating is not None else "",
             "Liked": "Yes" if info.get("liked") else "",
             "Watch Date": format_date(diary.get("date", {})),
-            "Runtime": diary.get("runtime") if diary.get("runtime") is not None else "",
+            "Runtime": runtime,
             "Rewatched": "Yes" if actions.get("rewatched") else "",
-            "Letterboxd URI": f"https://letterboxd.com/film/{slug}/",
+            "Letterboxd URI": uri,
         })
     return rows
 
 
-def scrape_with_retries():
+def scrape_with_retries(previous_rows):
     """Run scrape(), rotating browser fingerprints on Cloudflare 403s."""
     for attempt, profile in enumerate(IMPERSONATE_PROFILES):
         if attempt:
             time.sleep(RETRY_DELAY_SECONDS)
             print(f"Retrying with '{profile}' fingerprint...")
         ImpersonateSession.profile = profile
-        Scraper.set_instance(ImpersonateSession())
+        session = ImpersonateSession()
+        Scraper.set_instance(session)
         try:
-            return scrape()
+            return scrape(previous_rows)
         except AccessDeniedError as e:
             print(f"  Blocked with '{profile}' fingerprint: {e}")
+        finally:
+            session.close()
     raise SystemExit(
         "All browser fingerprints were blocked; this IP is likely flagged "
         "by Letterboxd. A rerun lands on a different runner IP and may pass."
     )
 
 
+def validate_rows(rows, previous_rows):
+    """Refuse empty/partial results before touching the published CSV."""
+    if not rows:
+        raise ValueError("Scrape returned no films; keeping the previous CSV")
+    by_uri = {row["Letterboxd URI"]: row for row in rows}
+    if len(by_uri) != len(rows):
+        raise ValueError("Scrape returned duplicate film URIs")
+    missing = [row["Name"] for row in previous_rows
+               if row["Letterboxd URI"] not in by_uri]
+    if missing:
+        raise ValueError(f"Scrape lost previously exported films: {missing}")
+    lost_dates = [row["Name"] for row in previous_rows
+                  if row.get("Watch Date")
+                  and not by_uri[row["Letterboxd URI"]].get("Watch Date")]
+    if lost_dates:
+        raise ValueError(f"Scrape lost previously exported watch dates: {lost_dates}")
+
+
+def write_rows(rows):
+    """Replace the CSV only after the full file is safely written."""
+    target = Path(OUTPUT_FILE)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", newline="", encoding="utf-8", dir=target.parent,
+            prefix=f".{target.name}.", delete=False,
+        ) as f:
+            temp_path = Path(f.name)
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(rows)
+        os.replace(temp_path, target)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
 def main():
     print(f"Scraping films for {USERNAME}...")
-    rows = scrape_with_retries()
+    previous_rows = read_previous_rows()
+    rows = scrape_with_retries(previous_rows)
+    validate_rows(rows, previous_rows)
 
     rows.sort(key=lambda r: r["Name"].lower())
 
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_rows(rows)
 
     print(f"Wrote {len(rows)} films to {OUTPUT_FILE}")
 
