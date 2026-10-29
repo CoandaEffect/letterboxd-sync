@@ -1,4 +1,3 @@
-import csv
 from pathlib import Path
 import tempfile
 import unittest
@@ -78,6 +77,15 @@ class SyncTests(unittest.TestCase):
             self.assertEqual(scrape.scrape_with_retries([]), [row()])
         for session in sessions:
             session.close.assert_called_once()
+
+    def test_configured_proxy_is_passed_to_letterboxd_session(self):
+        with patch.dict(scrape.os.environ, {"LETTERBOXD_PROXY": "http://proxy.example:8080"}), \
+             patch.object(scrape, "ImpersonateSession") as session, \
+             patch.object(scrape.Scraper, "set_instance"), \
+             patch.object(scrape, "scrape", return_value=[row()]):
+            self.assertEqual(scrape.scrape_with_retries([]), [row()])
+        session.assert_called_once_with(proxy="http://proxy.example:8080")
+        session.return_value.close.assert_called_once()
 
     def test_failed_validation_preserves_published_csv(self):
         with tempfile.TemporaryDirectory() as directory:

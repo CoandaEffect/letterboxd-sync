@@ -119,7 +119,9 @@ def scrape_with_retries(previous_rows):
             time.sleep(RETRY_DELAY_SECONDS)
             print(f"Retrying with '{profile}' fingerprint...")
         ImpersonateSession.profile = profile
-        session = ImpersonateSession()
+        # Set only for this session; do not log proxy URLs or credentials.
+        proxy = os.environ.get("LETTERBOXD_PROXY")
+        session = ImpersonateSession(proxy=proxy) if proxy else ImpersonateSession()
         Scraper.set_instance(session)
         try:
             return scrape(previous_rows)

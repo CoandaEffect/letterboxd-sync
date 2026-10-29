@@ -16,10 +16,9 @@ concurrency:
 
 jobs:
   sync:
-    # Linux/Azure runner IPs were blocked on every run from Oct 15–27.
-    # Use a separate hosted runner pool instead of rotating fingerprints
-    # repeatedly behind the same blocked IP.
-    runs-on: macos-15
+    # Set this repository variable to a runner label on an allowed network.
+    # Linux, macOS (ARM/Intel), and Windows hosted pools were all blocked.
+    runs-on: ${{ vars.LETTERBOXD_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -32,13 +31,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Scrape Letterboxd
+        env:
+          LETTERBOXD_PROXY: ${{ secrets.LETTERBOXD_PROXY }}
         run: python -u scrape.py
-
-      - name: Summarize failure
-        if: failure()
-        run: |
-          echo '::error::Letterboxd sync failed. The existing CSV has been preserved. Check this run for the failing request.'
-          echo 'Sync failed. Check the failed step above. GitHub Actions failure emails may be filtered as spam; allow notifications@github.com in your mail settings.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push if changed
         run: |
@@ -51,3 +46,9 @@ jobs:
             git commit -m "Update watched films $(date -u +%Y-%m-%d)"
             git push
           fi
+
+      - name: Summarize failure
+        if: failure()
+        run: |
+          echo '::error::Letterboxd sync did not complete. Check the failed step before relying on export freshness.'
+          echo 'Sync failed. Check the failed step above. For blocked requests, configure an allowed network using LETTERBOXD_RUNNER or LETTERBOXD_PROXY. GitHub Actions failure emails may be filtered as spam; allow notifications@github.com in your mail settings.' >> "$GITHUB_STEP_SUMMARY"
