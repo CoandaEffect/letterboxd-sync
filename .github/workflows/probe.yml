@@ -7,41 +7,44 @@ permissions:
   contents: read
 jobs:
   probe:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-24.04-arm, windows-latest, macos-15-intel]
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 5
-    defaults:
-      run:
-        shell: bash
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
     steps:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install curl-cffi==0.17.0
+      - run: pip install playwright curl-cffi==0.17.0
+      - run: playwright install chromium --with-deps
       - run: |
-          python -u - <<'PY'
-          import urllib.request
+          xvfb-run -a python -u - <<'PY'
+          from playwright.sync_api import sync_playwright
           from curl_cffi import requests
           urls = [
-              'https://letterboxd.com/coanda_effect/films/page/1/',
-              'https://letterboxd.com/coanda_effect/films/page/2/',
-              'https://letterboxd.com/coanda_effect/films/diary/',
+              'https://letterboxd.com/coanda_effect/films/',
+              'https://letterboxd.com/coanda_effect/films/by/date/',
+              'https://letterboxd.com/coanda_effect/films/by/date/page/2/',
+              'https://letterboxd.com/coanda_effect/rss/',
           ]
-          for client in ['urllib', 'chrome', 'safari', 'firefox']:
-              for url in urls:
+          for url in urls:
+              try:
+                  r = requests.get(url, impersonate='chrome', timeout=15)
+                  print('HTTP', url, r.status_code, 'valid=', 'griditem' in r.text or '<rss' in r.text, flush=True)
+              except Exception as e:
+                  print(type(e).__name__, str(e), flush=True)
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=False)
+              page = browser.new_page()
+              for url in [urls[0], 'https://letterboxd.com/coanda_effect/films/page/2/', 'https://letterboxd.com/coanda_effect/films/diary/']:
                   try:
-                      if client == 'urllib':
-                          req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                          with urllib.request.urlopen(req, timeout=15) as response:
-                              status, body = response.status, response.read().decode()
-                      else:
-                          response = requests.get(url, impersonate=client, timeout=15)
-                          status, body = response.status_code, response.text
-                      valid = 'diary-table' in body if '/diary/' in url else ('griditem' in body or 'poster-container' in body)
-                      print(client, url, status, 'valid_data=', valid, flush=True)
+                      r = page.goto(url, wait_until='domcontentloaded', timeout=30000)
+                      print('Browser initial:', url, r.status if r else None, page.title(), flush=True)
+                      try:
+                          page.wait_for_selector('li.griditem, li.poster-container, #diary-table', timeout=20000)
+                      except Exception:
+                          pass
+                      body = page.content()
+                      print('Browser result:', page.url, page.title(), 'valid=', 'griditem' in body or 'diary-table' in body, flush=True)
                   except Exception as e:
-                      print(client, url, type(e).__name__, str(e), flush=True)
+                      print(type(e).__name__, str(e), flush=True)
+              browser.close()
           PY
