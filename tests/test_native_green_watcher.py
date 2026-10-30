@@ -229,6 +229,13 @@ class NativeWatcherTests(unittest.TestCase):
         self.assertLessEqual(len(decision["registry"]), 255)
         self.assertEqual(decision["kind"], "quiet")
 
+    def test_sync_stale_during_held_review_is_quiet_but_real_overdue_is_urgent(self):
+        alert = {"title": "Letterboxd Green alert", "tag": "letterboxd-sync", "message": "sync stale"}
+        held = {"b": True, "p": "idle", "a": int(NOW.timestamp()), "s": 0}
+        self.assertEqual(self.policy(**alert, packed=held)["kind"], "quiet")
+        self.assertEqual(self.policy(**alert, packed=dict(held, s=int(NOW.timestamp())))["kind"], "urgent")
+        self.assertEqual(self.policy(**alert, packed=dict(held, p="failed"))["kind"], "urgent")
+
 
 if __name__ == "__main__":
     unittest.main()

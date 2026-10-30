@@ -27,6 +27,14 @@
   {%- elif n.get('title') == 'Letterboxd Green alert' -%}
     {%- set code = n.get('message', '') | replace(' ', '_') -%}
     {%- set result.key = categories.get(code, '') -%}
+    {%- if code == 'sync_stale' -%}
+      {%- set packed = states('sensor.letterboxd_green_health') | from_json({}) -%}
+      {%- if packed is mapping and packed.get('b') is sameas true
+            and packed.get('p') == 'idle' and packed.get('a', 0) is number
+            and packed.get('a', 0) > 0 and packed.get('s') == 0 -%}
+        {%- set result.key = '' -%}
+      {%- endif -%}
+    {%- endif -%}
   {%- endif -%}
 {%- elif tag == 'letterboxd_green_watcher' -%}
   {%- set notice = data.get('letterboxd_notice') -%}

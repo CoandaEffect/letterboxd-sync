@@ -110,6 +110,11 @@ watcher pause share a category. Unknown pause causes use a fallback category.
 Each category can notify at most once per rolling 24 hours. Different major
 categories can still notify within the same day.
 
+An App `sync_stale` alert stays quiet while public health shows a completed
+baseline, idle phase, a previous attempt, and no successful sync: this is the
+first candidate intentionally held for human review. Staleness after a successful
+sync, or while the first export is failed, remains urgent.
+
 Milestones, first success, candidate review, recovery, routine sync failure,
 invalid-source health, notification tests, and other minor notices stay off the
 phone. Watcher changes still update its existing HA persistent notification.
