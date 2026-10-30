@@ -10,11 +10,11 @@ https://raw.githubusercontent.com/CoandaEffect/letterboxd-sync/main/letterboxd-w
 
 ## How it works
 
-- A GitHub Action runs on odd-numbered days at 6 AM UTC (midnight Mountain during daylight saving time; 11 PM the previous day during standard time). GitHub may delay scheduled runs.
+- The Home Assistant Green App runs on odd-numbered days at 6 AM UTC (midnight Mountain during daylight saving time; 11 PM the previous day during standard time).
 - Letterboxd blocked the default Linux/Azure runners from October 15–27, 2026. Tests on October 29 also found paginated film/diary requests blocked on macOS ARM, macOS Intel, Linux ARM, and Windows runners, including a real-browser test. Changing hosted runner OS alone is not a verified fix.
 - It scrapes the films list and diary pages, merges and deduplicates entries
 - The resulting `letterboxd-watched.csv` is committed if changed
-- Can also be triggered manually via `workflow_dispatch`
+- The GitHub scraping workflow is manual recovery only, via `workflow_dispatch`; it has no automatic push or schedule trigger. The independent Green health watchdog keeps its schedule.
 - Known runtimes are reused from the existing CSV to reduce requests. Diary errors, missing previously exported films, and lost watch dates fail the sync and preserve the existing CSV. Intentional deletions require reviewing/updating the baseline CSV.
 - CSV updates are atomic and overlapping runs are serialized.
 
@@ -26,7 +26,7 @@ Check the Actions run status for sync freshness. A recent watch date or unchange
 
 ## Scheduled sync network
 
-Full scheduled scraping needs an allowed outbound network. Configure either:
+The Green App uses its local network. Manual GitHub recovery needs an allowed outbound network. Configure either:
 
 - **Self-hosted runner:** install a GitHub Actions runner on an always-on machine with a working Letterboxd connection, give it a dedicated label (for example `letterboxd`), and set the repository Actions variable `LETTERBOXD_RUNNER` to that label. This repo runs trusted code from `main`; pull-request tests remain on GitHub-hosted runners.
 - **Proxy:** put the proxy URL in the repository Actions secret `LETTERBOXD_PROXY`. It is passed only to the Letterboxd HTTP client; do not put credentials in code, repository variables, or workflow logs. The default hosted runner can then remain in use.
@@ -44,8 +44,8 @@ a five-day reliability result. Current rollout gates are in [WORK-STATUS.md](WOR
 The [guarded Green App](apps/letterboxd-sync/README.md) adds a four-hour idle
 baseline, isolated resource-limited worker, phone alerts, and a separate GitHub
 health watchdog. It starts inactive and holds its first candidate for review.
-The hosted schedule remains active until the Green's first validated publication
-and alert checks pass.
+The hosted automatic triggers are retired after Green acceptance. Manual GitHub
+recovery remains available; the separate health watchdog stays scheduled.
 
 ## Local usage
 

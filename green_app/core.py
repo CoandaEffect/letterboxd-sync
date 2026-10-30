@@ -30,6 +30,7 @@ class Config:
     schedule: str = SCHEDULE
     active: bool = False
     resume_nonce: str = ""
+    sync_request_nonce: str = ""
     approve_first_publish: bool = False
     summary_timezone: str = "America/Denver"
     summary_hour: int = 18
@@ -44,6 +45,8 @@ class Config:
         return config
 
     def validate(self):
+        if not isinstance(self.sync_request_nonce, str) or not re.fullmatch(r"[A-Za-z0-9_-]{0,64}", self.sync_request_nonce):
+            raise ValueError("invalid_sync_request_nonce")
         if not re.fullmatch(r"[A-Za-z0-9_-]+", self.username):
             raise ValueError("invalid_username")
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", self.github_repository):
@@ -146,6 +149,7 @@ class StateStore:
                  "incidents": {}, "last_attempt_at": None, "last_success_at": None,
                  "next_due_at": None, "phase": "startup", "resume_nonce": "",
                  "guard_counts": {}, "candidate_pending": False, "first_published": False,
+                 "sync_request_observed": "", "consumed_sync_requests": [],
                  "outcomes": [], "notification_test_accepted": False}
         if self.path.exists():
             try:
