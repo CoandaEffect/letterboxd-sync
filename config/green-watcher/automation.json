@@ -38,7 +38,7 @@
         "notification": {
           "title": "Letterboxd Green",
           "message": "{{ messages.get(noticekey, 'Green watcher requires attention.') }}",
-          "data": {"tag": "letterboxd_green_watcher"}
+          "data": {"tag": "letterboxd_green_watcher", "letterboxd_notice": "{{ noticekey }}"}
         }
       }
     },

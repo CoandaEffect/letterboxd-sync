@@ -50,14 +50,16 @@ Notification behavior:
   heartbeat, local silence, and inactive monitoring. Ordinary baseline/syncing/idle
   stays quiet. The issue key is a status class; a different incident code within
   a continuous `incident` state does not create another notice.
-- Save the delivered notice key only after the phone and persistent-notification
-  actions succeed. Failure leaves it eligible for the five-minute retry. An
-  unavailable notice helper blocks the action. HA start has no grace delay, so
-  missing local echoes can produce one startup silence notice.
+- Save the handled notice key only after the notification wrapper and persistent
+  notification actions succeed. Failure leaves it eligible for the five-minute
+  retry. An unavailable notice helper blocks the action. The wrapper may
+  deliberately suppress a phone delivery under the policy below. Silence notices
+  wait until the previous local echo is at least ten minutes old. If no echo
+  exists, the echo automation's current state's `last_changed` starts the grace.
 - After an issue, a healthy baseline/idle/syncing/success state emits one
   `recovery` notice and stores that key. A later issue alerts again. Candidate
   review alone does not qualify as an issue recovery.
-- Use a separate persistent `input_boolean` for first-success delivery. On
+- Use a separate persistent `input_boolean` for first-success handling. On
   `success_seen` and latch off, first success takes priority over recovery. Notify
   once, then turn the latch on. Future syncs must not re-arm it. Reset this latch
   only for an explicitly new trial. After delivery, save the snapshotted notice
@@ -69,7 +71,61 @@ Notification behavior:
   `heartbeat_stale` also covers GitHub publication/fetch trouble, not just App
   death. Distinguish these limitations from App failure in notification text.
 
-Rollback: disable and remove the watcher alerts automation first. Remove its
+## Phone policy: daily digest plus major problems
+
+`notification-policy.json` defines `script.letterboxd_green_notification_policy`.
+Its first variable embeds `policy-decision.jinja`; the regression test ensures
+these copies match. The script uses queued mode so simultaneous App and watcher
+notifications cannot race the shared deduplication registry.
+
+`wrapper-routing.json` is a routing fragment, not a directly deployable script:
+replace `KEEP_ORIGINAL_WRAPPER_SEQUENCE` with the current wrapper's original
+sequence unchanged. Only exact tags `letterboxd-sync`, `letterboxd_green_watcher`,
+and `letterboxd_green_watcher_test` enter this policy. Every other notification
+runs the original sequence. Copy the original delivery sequence to the internal
+`script.letterboxd_green_phone_delivery`, accepting the same `notification`
+object. That internal script must call the original delivery action directly;
+calling the shared wrapper would recurse. This keeps private phone service IDs
+out of the public policy files. The wrapper must call the policy synchronously.
+
+Create two persistent input-text helpers without initial values:
+
+- `input_text.letterboxd_green_last_digest`: last local date, max 10 characters.
+- `input_text.letterboxd_green_urgent_notices`: compact category timestamp JSON,
+  max 255 characters. Its ten allowed short categories fit within that limit.
+
+The existing App's daily-summary notification is the sole daily digest trigger;
+there is no new schedule. The gate allows that title once per HA local date and
+adds current watcher status to the message. Seed today's date during migration
+if today's digest was already accepted. This does not move the App's existing
+18:00 America/Denver summary or promise a digest while the App is unavailable.
+
+Phone-urgent App codes are host memory/CPU pressure, HA/MQTT latency, missing
+monitoring, worker memory/timeout/process/interruption/cleanup failures,
+post-sync health failure, missing baseline coverage, and stale sync. Worker and
+post-sync failures share one category. Watcher urgency is restricted to paused,
+heartbeat stale, and known local silence lasting at least ten minutes. A paused
+watcher uses the packed incident code when recognized, so the App's alert and
+watcher pause share a category. Unknown pause causes use a fallback category.
+Each category can notify at most once per rolling 24 hours. Different major
+categories can still notify within the same day.
+
+Milestones, first success, candidate review, recovery, routine sync failure,
+invalid-source health, notification tests, and other minor notices stay off the
+phone. Watcher changes still update its existing HA persistent notification.
+The test tag always stays off the phone. No test push is required for deployment.
+The policy stores a delivery marker after the delivery action succeeds; a crash
+between sending and saving can still cause a duplicate. Missing local echo uses
+the echo automation state's age as a ten-minute startup grace. If the automation
+entity itself is missing, status remains visible without inventing a start time.
+
+Policy rollback: restore the shared wrapper's original sequence from the private
+pre-change receipt before removing the policy and internal delivery scripts.
+Then remove the last-digest and urgent-registry helpers. This restores the prior
+phone behavior without changing other wrapper callers. Never remove a policy
+script while the shared wrapper still calls it.
+
+Watcher rollback: disable and remove the watcher alerts automation first. Remove its
 notice/status template helpers, last-notice text helper, first-success boolean,
 and dedicated Scrape resource through their config APIs. Keep the existing MQTT
 echo and Letterboxd App; this watcher does not own them. Removing the watcher

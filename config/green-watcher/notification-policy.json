@@ -1,0 +1,78 @@
+{
+  "alias": "Letterboxd Green notification policy",
+  "description": "One daily phone digest, plus deduplicated major incidents. Native HA only.",
+  "mode": "queued",
+  "max": 20,
+  "fields": {
+    "notification": {
+      "required": true,
+      "selector": {
+        "object": {}
+      }
+    }
+  },
+  "sequence": [
+    {
+      "variables": {
+        "policy_json": "{%- set n = notification if notification is mapping else {} -%}\n{%- set data = n.get('data', {}) -%}\n{%- set data = data if data is mapping else {} -%}\n{%- set tag = data.get('tag') -%}\n{%- set today = now().strftime('%Y-%m-%d') -%}\n{%- set t = as_timestamp(now()) | int -%}\n{%- set categories = {\n  'host_memory': 'mem', 'host_cpu': 'cpu', 'ha_latency': 'ha', 'mqtt_latency': 'mq',\n  'monitoring_missing': 'mon', 'worker_memory_failure': 'wrk',\n  'worker_wall_timeout': 'wrk', 'worker_resource_or_process_failure': 'wrk',\n  'worker_interrupted': 'wrk', 'worker_cleanup_unverified': 'wrk',\n  'post_sync_health_failed': 'wrk', 'baseline_coverage_missing': 'bs', 'sync_stale': 'sy'} -%}\n{%- set result = namespace(kind='quiet', key='', registry={}) -%}\n{%- set previous = states('input_text.letterboxd_green_urgent_notices') | from_json({}) -%}\n{%- if previous is mapping -%}\n  {%- for key, stamp in previous.items() -%}\n    {%- if key in ['mem', 'cpu', 'ha', 'mq', 'mon', 'wrk', 'bs', 'sy', 'hb', 'ps']\n          and stamp is number and stamp >= t - 86400 -%}\n      {%- set result.registry = dict(result.registry.items() | list + [(key, stamp | int)]) -%}\n    {%- endif -%}\n  {%- endfor -%}\n{%- endif -%}\n{%- if tag == 'letterboxd-sync' -%}\n  {%- if n.get('title') == 'Letterboxd Green daily summary'\n        and states('input_text.letterboxd_green_last_digest') != today -%}\n    {%- set result.kind = 'daily' -%}\n  {%- elif n.get('title') == 'Letterboxd Green alert' -%}\n    {%- set code = n.get('message', '') | replace(' ', '_') -%}\n    {%- set result.key = categories.get(code, '') -%}\n  {%- endif -%}\n{%- elif tag == 'letterboxd_green_watcher' -%}\n  {%- set notice = data.get('letterboxd_notice') -%}\n  {%- if notice == 'paused' -%}\n    {%- set packed = states('sensor.letterboxd_green_health') | from_json({}) -%}\n    {%- set code = packed.get('i', '') if packed is mapping else '' -%}\n    {%- set result.key = categories.get(code, 'ps') -%}\n  {%- elif notice == 'heartbeat_stale' -%}\n    {%- set result.key = 'hb' -%}\n  {%- elif notice == 'local_silence' -%}\n    {%- set echo = as_timestamp(state_attr('automation.letterboxd_sync_health_echo', 'last_triggered'), none) -%}\n    {%- if echo is none or echo <= 0 -%}\n      {%- set entity = states.automation.letterboxd_sync_health_echo -%}\n      {%- set echo = as_timestamp(entity.last_changed, none) if entity is defined and entity is not none else none -%}\n    {%- endif -%}\n    {%- if echo is not none and t - echo >= 600 -%}\n      {%- set result.key = 'mon' -%}\n    {%- endif -%}\n  {%- endif -%}\n{%- endif -%}\n{%- if result.key and t - result.registry.get(result.key, 0) >= 86400 -%}\n  {%- set result.kind = 'urgent' -%}\n  {%- set result.registry = dict(result.registry.items() | list + [(result.key, t)]) -%}\n{%- endif -%}\n{{- {'kind': result.kind, 'key': result.key, 'day': today,\n      'registry': result.registry | to_json} | to_json -}}"
+      }
+    },
+    {
+      "variables": {
+        "decision": "{{ policy_json if policy_json is mapping else policy_json | from_json({}) }}"
+      }
+    },
+    {
+      "condition": "template",
+      "value_template": "{{ decision.get('kind') in ['daily', 'urgent'] }}"
+    },
+    {
+      "action": "script.letterboxd_green_phone_delivery",
+      "data": {
+        "notification": "{{ dict(notification.items() | list + [('message', notification.get('message', '') ~ '\\nWatcher: ' ~ states('sensor.letterboxd_green_watcher_status'))]) if decision.kind == 'daily' else notification }}"
+      }
+    },
+    {
+      "choose": [
+        {
+          "conditions": [
+            {
+              "condition": "template",
+              "value_template": "{{ decision.kind == 'daily' }}"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "input_text.set_value",
+              "target": {
+                "entity_id": "input_text.letterboxd_green_last_digest"
+              },
+              "data": {
+                "value": "{{ decision.day }}"
+              }
+            }
+          ]
+        },
+        {
+          "conditions": [
+            {
+              "condition": "template",
+              "value_template": "{{ decision.kind == 'urgent' }}"
+            }
+          ],
+          "sequence": [
+            {
+              "action": "input_text.set_value",
+              "target": {
+                "entity_id": "input_text.letterboxd_green_urgent_notices"
+              },
+              "data": {
+                "value": "{{ decision.registry }}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

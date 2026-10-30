@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import unittest
+from types import SimpleNamespace
 
 try:
     from jinja2 import Environment, StrictUndefined
@@ -16,6 +17,15 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[1] / "config" / "green-watcher"
 NOW = datetime(2026, 1, 1, 12, tzinfo=timezone.utc)
+
+
+class FakeStates:
+    def __init__(self, values, changed):
+        self.values = values
+        self.automation = SimpleNamespace(letterboxd_sync_health_echo=SimpleNamespace(last_changed=changed))
+
+    def __call__(self, entity):
+        return self.values.get(entity)
 
 
 def epoch(value, default=None):
@@ -106,11 +116,12 @@ class NativeWatcherTests(unittest.TestCase):
         self.assertEqual(self.status(self.fixture(last_attempt_at=None,
                                                  last_success_at=NOW.isoformat())), "invalid_health")
 
-    def notice(self, status, last="", latch="off"):
+    def notice(self, status, last="", latch="off", echo_age=900, changed_age=900):
         values = {"sensor.letterboxd_green_watcher_status": status,
                   "input_text.letterboxd_green_watcher_last_notice": last,
                   "input_boolean.letterboxd_green_first_success_notified": latch}
-        return self.render("notice-state.jinja", states=values.get)
+        return self.render("notice-state.jinja", states=FakeStates(values, NOW-timedelta(seconds=changed_age)),
+                           state_attr=lambda *args: None if echo_age is None else NOW-timedelta(seconds=echo_age))
 
     def test_notice_issues_and_review_deduplicate_restored_last_notice(self):
         for status in ("invalid_health", "heartbeat_stale", "local_silence", "paused",
@@ -148,6 +159,75 @@ class NativeWatcherTests(unittest.TestCase):
         actions = json.dumps(config["actions"])
         for forbidden in ("restart", "resume", "approve", "publish", "addon", "supervisor"):
             self.assertNotIn(forbidden, actions)
+
+    def policy(self, title="Letterboxd Green", tag="letterboxd_green_watcher", notice="",
+               message="", registry=None, digest="", packed=None, echo_age=900, offset=0, changed_age=900):
+        self.env.globals["now"] = lambda: NOW + timedelta(seconds=offset)
+        values = {"input_text.letterboxd_green_urgent_notices": json.dumps(registry or {}),
+                  "input_text.letterboxd_green_last_digest": digest,
+                  "sensor.letterboxd_green_health": json.dumps(packed or {}),
+                  "sensor.letterboxd_green_watcher_status": "baseline"}
+        return json.loads(self.render("policy-decision.jinja", states=FakeStates(values, NOW-timedelta(seconds=changed_age)),
+                           state_attr=lambda *args: None if echo_age is None else NOW-timedelta(seconds=echo_age),
+                           notification={"title": title, "message": message,
+                                         "data": {"tag": tag, "letterboxd_notice": notice}}))
+
+    def test_policy_minor_milestones_and_recovery_are_phone_quiet(self):
+        for notice in ("review_required", "first_success", "recovery", "invalid_health", "inactive", "failed", "incident"):
+            self.assertEqual(self.policy(notice=notice)["kind"], "quiet")
+        for title, message in (("Letterboxd Green recovery", "host memory recovered"),
+                               ("Letterboxd Green alert", "sync failed"),
+                               ("Letterboxd Green notification test", "test")):
+            self.assertEqual(self.policy(title=title, tag="letterboxd-sync", message=message)["kind"], "quiet")
+
+    def test_policy_daily_once_per_local_date(self):
+        title = "Letterboxd Green daily summary"
+        self.assertEqual(self.policy(title=title, tag="letterboxd-sync")["kind"], "daily")
+        self.assertEqual(self.policy(title=title, tag="letterboxd-sync", digest="2026-01-01")["kind"], "quiet")
+        self.assertEqual(self.policy(title=title, tag="letterboxd-sync", digest="2025-12-31")["day"], "2026-01-01")
+
+    def test_policy_major_dedup_and_cross_source_category(self):
+        first = self.policy(title="Letterboxd Green alert", tag="letterboxd-sync", message="host memory")
+        self.assertEqual(first["kind"], "urgent")
+        registry = json.loads(first["registry"])
+        self.assertEqual(self.policy(notice="paused", packed={"i": "host_memory"}, registry=registry)["kind"], "quiet")
+        self.assertEqual(self.policy(notice="paused", packed={"i": "host_memory"}, registry=registry, offset=86400)["kind"], "urgent")
+
+    def test_policy_silence_waits_ten_minutes_and_unknown_pause_is_major(self):
+        self.assertEqual(self.policy(notice="local_silence", echo_age=599)["kind"], "quiet")
+        self.assertEqual(self.policy(notice="local_silence", echo_age=600)["kind"], "urgent")
+        self.assertEqual(self.policy(notice="paused")["kind"], "urgent")
+        self.assertEqual(self.policy(notice="heartbeat_stale")["kind"], "urgent")
+        self.assertEqual(self.notice("local_silence", echo_age=599), "quiet")
+        self.assertEqual(self.notice("local_silence", echo_age=600), "local_silence")
+        self.assertEqual(self.notice("local_silence", echo_age=None, changed_age=599), "quiet")
+        self.assertEqual(self.notice("local_silence", echo_age=None, changed_age=600), "local_silence")
+        self.assertEqual(self.policy(notice="local_silence", echo_age=None, changed_age=599)["kind"], "quiet")
+        self.assertEqual(self.policy(notice="local_silence", echo_age=None, changed_age=600)["kind"], "urgent")
+
+    def test_policy_exact_tags_only_and_wrapper_passthrough(self):
+        for tag in ("other", "letterboxd-sync-other", "", None):
+            self.assertEqual(self.policy(tag=tag, notice="paused")["kind"], "quiet")
+        route = json.loads((ROOT / "wrapper-routing.json").read_text())
+        predicate = route["choose"][0]["conditions"][0]["value_template"]
+        for tag, expected in (("letterboxd-sync", "True"), ("letterboxd_green_watcher", "True"),
+                              ("letterboxd_green_watcher_test", "True"), ("other", "False")):
+            self.assertEqual(self.env.from_string(predicate).render(notification={"data": {"tag": tag}}), expected)
+        self.assertEqual(route["default"], "KEEP_ORIGINAL_WRAPPER_SEQUENCE")
+
+    def test_policy_script_embeds_same_decision_and_delivers_before_marking(self):
+        script = json.loads((ROOT / "notification-policy.json").read_text())
+        self.assertEqual(script["mode"], "queued")
+        self.assertEqual(script["sequence"][0]["variables"]["policy_json"],
+                         (ROOT / "policy-decision.jinja").read_text().strip())
+        self.assertEqual(script["sequence"][3]["action"], "script.letterboxd_green_phone_delivery")
+        self.assertIn("choose", script["sequence"][4])
+
+    def test_policy_registry_stays_under_helper_state_limit(self):
+        registry = {key: int(NOW.timestamp()) for key in ("mem", "cpu", "ha", "mq", "mon", "wrk", "bs", "sy", "hb", "ps")}
+        decision = self.policy(notice="paused", registry=registry)
+        self.assertLessEqual(len(decision["registry"]), 255)
+        self.assertEqual(decision["kind"], "quiet")
 
 
 if __name__ == "__main__":
