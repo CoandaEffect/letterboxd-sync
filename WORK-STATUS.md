@@ -33,6 +33,13 @@ the first validated Green success, including a valid unchanged result.
 
 The independent GitHub watchdog is enabled by
 `GREEN_WATCHDOG_ENABLED=true`; its normal check passed in run 40973930895.
+The first automatic watchdog run remains unobserved as of 00:38 UTC. Its
+workflow is active on the default branch and the repository is enabled.
+Checks are being offset to minutes 7, 22, 37, and 52, preserving 15-minute
+spacing while avoiding the top-of-hour load described in
+[GitHub's schedule documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+Automatic scheduling remains an acceptance observation; a successful manual
+run is not proof that the cron trigger fired.
 The controlled failure from run 40966542158 reached the Inbox with its exact
 run link. Phone test trace `99947c03452673c57bfd5aeae7afc8e4` finished successfully
 at 23:30:47 UTC, including the mobile notification action. This proves HA
