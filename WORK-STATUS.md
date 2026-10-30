@@ -1,5 +1,9 @@
 # Green rollout task list
 
+Live acceptance state and receipts: local private ledger
+`.rollout-evidence/deployment-ledger.md`. The tracked notes below are implementation
+history; use the private ledger before making deployment changes.
+
 - [x] Read the supplied handoff and inspect the starting checkout.
 - [x] Fetch current remote branches without changing the working tree.
 - [x] Import the reviewed smoke script and match its handoff SHA-256.
@@ -9,66 +13,11 @@
 - [x] Verify the production client on ARM64 under the approved limits.
 - [x] Implement and test the App, protection, publication, and watchdog.
 - [x] Install the prebuilt App inactive with protection enabled.
-- [x] Configure the dedicated repository credential securely.
-- [x] Exercise phone/email alerts and start the four-hour idle baseline.
+- [ ] Configure the dedicated repository credential securely.
+- [ ] Exercise phone/email alerts and start the four-hour idle baseline.
 - [ ] Validate and publish the first full Green export.
 - [ ] Retire the hosted schedule after acceptance gates pass.
-- [x] Configure five-day observation, daily reports, and review reminder.
-
-## Active observation
-
-The actual Green started its observation on **2026-10-29 at
-23:33:58.733682 UTC (5:33:58 p.m. MDT)**, after healthy probes, a successful
-repository read, and HA acceptance of the phone test. The four-hour idle
-baseline ends **2026-10-30 at 03:33:58 UTC (October 29, 9:33:58 p.m. MDT)**.
-Five elapsed days ends **2026-11-03 at 23:33:58 UTC (4:33:58 p.m. MST)**;
-the local hour changes because daylight saving time ends during the soak.
-
-App `10132b86_letterboxd_sync` 0.1.1 is active and protected, with start on
-boot enabled. Supervisor watchdog and automatic updates remain off.
-The first full scrape waits for complete baseline coverage, and its candidate
-is held for review with `approve_first_publish=false`. No full Green export
-has been accepted yet. The existing hosted automatic triggers remain until
-the first validated Green success, including a valid unchanged result.
-
-The independent GitHub watchdog is enabled by
-`GREEN_WATCHDOG_ENABLED=true`; its normal check passed in run 40973930895.
-The first automatic watchdog run remains unobserved as of 00:38 UTC. Its
-workflow is active on the default branch and the repository is enabled.
-Checks are being offset to minutes 7, 22, 37, and 52, preserving 15-minute
-spacing while avoiding the top-of-hour load described in
-[GitHub's schedule documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
-Automatic scheduling remains an acceptance observation; a successful manual
-run is not proof that the cron trigger fired.
-The controlled failure from run 40966542158 reached the Inbox with its exact
-run link. Phone test trace `99947c03452673c57bfd5aeae7afc8e4` finished successfully
-at 23:30:47 UTC, including the mobile notification action. This proves HA
-service acceptance, not user-observed phone display. The App then accepted its
-own preflight at 23:32:58 UTC and started the clock on the next healthy minute.
-
-A recurring Codex follow-up checks baseline/candidate acceptance every 15
-minutes and stays quiet when unchanged. It is instructed to review the first
-candidate, verify the first successful export, then retire the hosted automatic
-triggers while preserving manual recovery. A separate one-time review reminder
-is scheduled for **November 3 at 4:34 p.m. America/Denver**. A healthy App keeps
-running after day five. The review report target is
-`reports/green-soak-2026-11-03.md`.
-Codex follow-ups require this Mac and the desktop app to remain available;
-the Green's own monitoring and GitHub watchdog run independently.
-
-At 23:39:58 UTC, the first seven baseline slots were valid, with no incident,
-no notification-delivery failure, and no worker running. The native UI showed
-version 0.1.1 running, start on boot enabled, and watchdog/auto-update off;
-the lead viewed both Info and Log captures. Remaining baseline slots are
-future observations, not reported as failed measurements.
-
-The dedicated repository credential was backed up to a private 1Password item
-and exact readback verified. It was transferred into this App through the
-existing configured MCP connection without secret-valued arguments or output.
-The originally supplied Downloads file was no longer present before that
-transfer; no extra plaintext copy was created. The reusable `onepassword-cli`
-skill is installed and validated with 11 passing helper tests. Private object
-IDs, configuration receipts, and rollback details stay in `.rollout-evidence`.
+- [ ] Configure five-day observation, daily reports, and review reminder.
 
 ## Current verified state
 
@@ -166,12 +115,12 @@ No email, filter, notification preference, or public health record was modified.
 Scheduled watchdog checks remain disabled until the repository activation flag
 is enabled. Phone acceptance and the dedicated GitHub credential are pending.
 
-These setup gates subsequently passed; the active observation above is the
-current state. The next gate is the first full candidate after the idle baseline.
-Review its validation summary, worker peaks, and host responsiveness before
-enabling first publication. The user explicitly authorized continuing through
-the soak start; the accepted implementation plan includes the staged acceptance
-and removal of duplicate unattended hosted publishing after Green success.
+Next: complete secure credential entry, check probes and phone acceptance,
+then start the observation and record its actual timestamps.
+The user explicitly authorized continuing through that start without another
+rollout approval. Full-scrape fit is checked after the four-hour idle baseline;
+first CSV publication remains gated on reviewing that candidate. No baseline,
+five-day clock, day-five reminder, or unattended Green publisher is active yet.
 
 The dedicated non-actuating MQTT echo automation is installed and read back:
 `automation.letterboxd_sync_health_echo`, unique ID `1793312579423`.
