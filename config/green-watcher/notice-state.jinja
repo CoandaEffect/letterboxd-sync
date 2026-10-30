@@ -1,0 +1,19 @@
+{%- set status = states('sensor.letterboxd_green_watcher_status') -%}
+{%- set last = states('input_text.letterboxd_green_watcher_last_notice') -%}
+{%- set issues = ['invalid_health', 'heartbeat_stale', 'local_silence', 'paused', 'failed', 'incident', 'inactive'] -%}
+{%- set desired = namespace(key='quiet') -%}
+{%- set echo = as_timestamp(state_attr('automation.letterboxd_sync_health_echo', 'last_triggered'), none) -%}
+{%- if echo is none or echo <= 0 -%}
+  {%- set entity = states.automation.letterboxd_sync_health_echo -%}
+  {%- set echo = as_timestamp(entity.last_changed, none) if entity is defined and entity is not none else none -%}
+{%- endif -%}
+{%- if status == 'local_silence' and (echo is none or as_timestamp(now()) - echo < 600) -%}
+  {%- set desired.key = 'quiet' -%}
+{%- elif status in issues or status == 'review_required' -%}
+  {%- set desired.key = status -%}
+{%- elif status == 'success_seen' and states('input_boolean.letterboxd_green_first_success_notified') == 'off' -%}
+  {%- set desired.key = 'first_success' -%}
+{%- elif status in ['baseline', 'idle', 'syncing', 'success_seen'] and last in issues -%}
+  {%- set desired.key = 'recovery' -%}
+{%- endif -%}
+{{- desired.key if desired.key != last else 'quiet' -}}

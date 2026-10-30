@@ -90,6 +90,13 @@ class CoreTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 StateStore(Path(directory)).load()
 
+    def test_manual_sync_request_accepts_only_bounded_nonsecret_tokens(self):
+        for nonce in ("", "a" * 64, "reviewed-run_2026-10-30"):
+            Config(sync_request_nonce=nonce).validate()
+        for nonce in ("a" * 65, "with spaces", "line\nbreak", None, 123):
+            with self.subTest(nonce=nonce), self.assertRaises(ValueError):
+                Config(sync_request_nonce=nonce).validate()
+
     def test_public_status_is_allowlisted(self):
         state = {"github_token": "secret", "sample": sample(), "pause": "host_memory"}
         health = public_health(state, NOW, True)
@@ -384,6 +391,133 @@ class RuntimeTests(unittest.TestCase):
         self.worker.running = True
         self.coordinator.start_sync(NOW)
         self.worker.start.assert_not_called()
+
+    def manual_ready(self):
+        self.config.active = True
+        self.config.sync_request_nonce = "fresh-export-1"
+        self.worker.completed.return_value = None
+        self.coordinator.state.update(trial_started_at=(NOW - timedelta(hours=5)).isoformat(),
+            trial_ends_at=(NOW + timedelta(days=4)).isoformat(),
+            baseline_ends_at=(NOW - timedelta(hours=1)).isoformat(), baseline_complete=True,
+            first_published=True, phase="idle", next_due_at=(NOW + timedelta(days=1)).isoformat())
+
+    def test_manual_request_runs_full_fresh_pipeline_and_normal_schedule(self):
+        self.manual_ready()
+        candidate = CSV.replace(b"Film,2026", b"Film renamed,2026")
+        clocks = {key: self.coordinator.state[key] for key in
+                  ("trial_started_at", "trial_ends_at", "baseline_ends_at")}
+
+        def start(reference, username):
+            persisted = self.coordinator.store.load()
+            self.assertTrue(persisted["consumed_sync_requests"])
+            self.assertTrue(persisted["worker_inflight"])
+            (self.path / "worker").mkdir()
+            (self.path / "worker" / "candidate.csv").write_bytes(candidate)
+
+        self.worker.start.side_effect = start
+        self.coordinator.tick(NOW, sample())
+        self.worker.start.assert_called_once_with(CSV, self.config.username)
+        self.github.write_export.assert_not_called()
+        self.worker.completed.return_value = {"ok": True, "duration_seconds": 20}
+        finished = NOW + timedelta(minutes=1)
+        self.coordinator.tick(finished, sample(finished))
+        self.github.write_export.assert_called_once_with(candidate, "same")
+        self.assertEqual(self.coordinator.state["last_outcome"], "published")
+        self.assertEqual(self.coordinator.state["last_success_at"], finished.isoformat())
+        self.assertEqual(self.coordinator.state["next_due_at"], next_schedule(finished).isoformat())
+        self.assertEqual(clocks, {key: self.coordinator.state[key] for key in clocks})
+        self.coordinator.tick(finished + timedelta(minutes=1), sample(finished + timedelta(minutes=1)))
+        self.worker.start.assert_called_once()
+        records = [json.loads(line) for line in (self.path / "events.jsonl").read_text().splitlines()]
+        self.assertEqual(sum(r["code"] == "manual_sync_requested" for r in records), 1)
+        self.assertEqual(sum(r["code"] == "manual_sync_accepted" for r in records), 1)
+        self.assertNotIn(self.config.sync_request_nonce, json.dumps(records))
+
+    def test_manual_request_defers_without_bypassing_safety_gates(self):
+        for blocked in ("inactive", "baseline", "review", "pause", "health", "candidate", "backoff"):
+            with self.subTest(blocked=blocked):
+                self.manual_ready()
+                self.coordinator.state.update(pause=None, candidate_pending=False, attempt_retry_at=None)
+                self.config.active = blocked != "inactive"
+                self.config.approve_first_publish = False
+                if blocked == "baseline":
+                    self.coordinator.state["baseline_complete"] = False
+                if blocked == "review":
+                    self.coordinator.state["first_published"] = False
+                if blocked == "pause":
+                    self.coordinator.state["pause"] = "host_memory"
+                if blocked == "candidate":
+                    self.coordinator.state["candidate_pending"] = True
+                if blocked == "backoff":
+                    self.coordinator.state["attempt_retry_at"] = (NOW + timedelta(minutes=5)).isoformat()
+                self.coordinator.tick(NOW, sample(mqtt_ms=None) if blocked == "health" else sample())
+                self.worker.start.assert_not_called()
+                self.assertEqual(self.coordinator.store.load()["consumed_sync_requests"], [])
+
+    def test_manual_request_during_worker_defers_and_never_overlaps(self):
+        self.manual_ready()
+        self.worker.running = True
+        self.coordinator.state.update(worker_inflight=True, phase="syncing", reference_sha="same")
+        self.coordinator.tick(NOW, sample())
+        self.worker.start.assert_not_called()
+        self.assertEqual(self.coordinator.store.load()["consumed_sync_requests"], [])
+        self.worker.running = False
+        self.coordinator.state.update(worker_inflight=False, phase="idle")
+        self.coordinator.tick(NOW + timedelta(minutes=1), sample(NOW + timedelta(minutes=1)))
+        self.worker.start.assert_called_once()
+
+    def test_manual_nonce_is_consumed_across_restart_and_after_other_requests(self):
+        self.manual_ready()
+        for nonce in ("fresh-export-1", "fresh-export-2"):
+            self.config.sync_request_nonce = nonce
+            self.coordinator.state.update(worker_inflight=False, phase="idle", attempt_retry_at=None)
+            self.coordinator.tick(NOW, sample())
+        self.assertEqual(self.worker.start.call_count, 2)
+        self.coordinator.state.update(worker_inflight=False, phase="idle")
+        self.coordinator.store.save(self.coordinator.state)
+        self.config.sync_request_nonce = "fresh-export-1"
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        replacement.tick(NOW + timedelta(minutes=1), sample(NOW + timedelta(minutes=1)))
+        self.assertEqual(self.worker.start.call_count, 2)
+        self.assertEqual(len(replacement.store.load()["consumed_sync_requests"]), 2)
+
+    def test_failed_manual_start_does_not_repeat_nonce(self):
+        self.manual_ready()
+        self.github.fetch_export.side_effect = OSError("unavailable")
+        self.coordinator.tick(NOW, sample())
+        self.github.fetch_export.side_effect = None
+        self.coordinator.tick(NOW + timedelta(minutes=20), sample(NOW + timedelta(minutes=20)))
+        self.worker.start.assert_not_called()
+        self.assertEqual(len(self.coordinator.store.load()["consumed_sync_requests"]), 1)
+
+    def test_manual_request_capacity_refuses_new_requests_without_eviction(self):
+        self.manual_ready()
+        consumed = [f"{number:064x}" for number in range(128)]
+        self.coordinator.state["consumed_sync_requests"] = consumed.copy()
+        self.coordinator.tick(NOW, sample())
+        self.coordinator.tick(NOW + timedelta(minutes=1), sample(NOW + timedelta(minutes=1)))
+        self.worker.start.assert_not_called()
+        self.assertEqual(self.coordinator.store.load()["consumed_sync_requests"], consumed)
+        records = [json.loads(line) for line in (self.path / "events.jsonl").read_text().splitlines()]
+        self.assertEqual(sum(r["code"] == "manual_sync_request_limit_reached" for r in records), 1)
+
+    def test_manual_candidate_keeps_validation_and_reference_conflict_guards(self):
+        for candidate, sha in ((CSV.replace(b"2026-10-01", b""), "same"),
+                               (CSV, "changed-during-worker")):
+            with self.subTest(sha=sha):
+                self.manual_ready()
+                self.coordinator.state.update(consumed_sync_requests=[], worker_inflight=False,
+                    attempt_retry_at=None, pause=None)
+                self.github.fetch_export.return_value = (CSV, "same")
+                self.coordinator.tick(NOW, sample())
+                (self.path / "worker").mkdir(exist_ok=True)
+                (self.path / "worker" / "candidate.csv").write_bytes(candidate)
+                self.github.fetch_export.return_value = (CSV, sha)
+                self.worker.completed.return_value = {"ok": True}
+                self.coordinator.tick(NOW + timedelta(minutes=1), sample(NOW + timedelta(minutes=1)))
+                self.github.write_export.assert_not_called()
+                self.assertEqual(self.coordinator.state["last_outcome"], "failed")
+                self.assertIsNone(self.coordinator.state["last_success_at"])
 
     def test_github_write_failure_does_not_mark_success(self):
         self.config.approve_first_publish = True

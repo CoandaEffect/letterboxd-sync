@@ -70,6 +70,29 @@ and the phone/email alert checks pass. Then retire the hosted schedule to leave
 one unattended publisher. A valid unchanged export advances freshness without
 creating an unnecessary CSV commit.
 
+## Request a fresh export
+
+After the first candidate has been reviewed and successfully released, set
+`sync_request_nonce` to a new nonsecret token and save the App options. Use up
+to 64 letters, digits, underscores, or hyphens; a UUID is suitable. The next
+healthy monitoring tick starts one full scrape through the normal validation,
+destination-SHA check, and publication path. A heartbeat alone does not fulfill
+this request. A successful run sets the next due time to the normal schedule.
+
+The request waits while inactive, before the baseline and first publication
+finish, during a protective pause, while a candidate awaits review, during an
+existing worker, or during the existing attempt backoff. It never resumes a
+pause or starts a second worker. Only the currently configured request waits;
+changing the token replaces an unconsumed request. Accepted tokens are consumed
+durably before any worker starts, including failed starts, and cannot be reused
+after restart. Use a new token for another attempt. Clear the field to cancel an
+unconsumed request.
+
+Logs record `manual_sync_requested` and `manual_sync_accepted` without the token.
+The App retains at most 128 consumed fingerprints, never evicts them, and then
+refuses further manual requests with `manual_sync_request_limit_reached` in the
+log. Scheduled syncs continue normally.
+
 ## Protection and recovery
 
 Monitoring samples once per minute. Exports pause on:

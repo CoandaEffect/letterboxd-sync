@@ -1,5 +1,6 @@
 """Single worker, persistent safety latch and minute monitoring loop."""
 from datetime import datetime, timedelta
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -361,6 +362,30 @@ class Coordinator:
                 self.worker.stop()
             self.failed_sync("sync_start_failed", now)
 
+    def manual_request(self, now):
+        nonce = self.config.sync_request_nonce
+        if not nonce:
+            return None
+        fingerprint = hashlib.sha256(nonce.encode()).hexdigest()
+        if fingerprint in self.state["consumed_sync_requests"]:
+            return None
+        if fingerprint != self.state["sync_request_observed"]:
+            self.state["sync_request_observed"] = fingerprint
+            self.store.save(self.state)
+            self.event("manual_sync_requested", now)
+            if len(self.state["consumed_sync_requests"]) >= 128:
+                self.event("manual_sync_request_limit_reached", now)
+        if len(self.state["consumed_sync_requests"]) >= 128:
+            return None
+        return fingerprint
+
+    def accept_manual_request(self, fingerprint, now):
+        # Persist consumption before any external call so a restart cannot replay it.
+        self.state["consumed_sync_requests"].append(fingerprint)
+        self.store.save(self.state)
+        self.event("manual_sync_accepted", now)
+        self.start_sync(now)
+
     def failed_sync(self, code, now):
         self.state.update(last_outcome="failed", phase="failed", worker_inflight=False,
                           candidate_pending=False)
@@ -459,6 +484,7 @@ class Coordinator:
         self.state["last_sample"] = sample
         self.state["scheduler_enabled"] = False
         force_status = False
+        manual_request = self.manual_request(now)
         if not self.config.active and not self.state["trial_started_at"] and not self.config.github_token:
             self.log_status(now)
             self.store.save(self.state)
@@ -524,8 +550,11 @@ class Coordinator:
                         self.finish_candidate(now)
                 elif not self.worker.running and not self.state.get("worker_inflight"):
                     retry = instant(self.state.get("attempt_retry_at"))
-                    if now >= instant(self.state["next_due_at"]) and (not retry or now >= retry):
-                        self.start_sync(now)
+                    if not retry or now >= retry:
+                        if manual_request and self.state["first_published"]:
+                            self.accept_manual_request(manual_request, now)
+                        elif now >= instant(self.state["next_due_at"]):
+                            self.start_sync(now)
             due = instant(self.state["next_due_at"])
             if self.state["baseline_complete"] and due and now > due + timedelta(hours=6):
                 self.incident("sync_stale", now)

@@ -1,0 +1,19 @@
+{
+  "choose": [
+    {
+      "conditions": [
+        {
+          "condition": "template",
+          "value_template": "{{ notification is mapping and notification.get('data') is mapping and notification.data.get('tag') in ['letterboxd-sync', 'letterboxd_green_watcher', 'letterboxd_green_watcher_test'] }}"
+        }
+      ],
+      "sequence": [
+        {
+          "action": "script.letterboxd_green_notification_policy",
+          "data": {"notification": "{{ notification }}"}
+        }
+      ]
+    }
+  ],
+  "default": "KEEP_ORIGINAL_WRAPPER_SEQUENCE"
+}

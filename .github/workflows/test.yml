@@ -2,7 +2,7 @@ name: Test scraper and Green
 
 on:
   push:
-    paths: ["scrape.py", "green_app/**", "tools/**", "tests/**", "requirements.txt", ".github/workflows/**"]
+    paths: ["scrape.py", "green_app/**", "tools/**", "tests/**", "config/green-watcher/**", "requirements.txt", "requirements-test.txt", ".github/workflows/**"]
   pull_request:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
         with:
           version: "0.13.6"
       - run: uv venv .venv
-      - run: uv pip install --python .venv/bin/python -r requirements.txt -r green_app/requirements.txt
+      - run: uv pip install --python .venv/bin/python -r requirements.txt -r green_app/requirements.txt -r requirements-test.txt
       - run: .venv/bin/python -m unittest discover -s tests -v > test-results.txt 2>&1
       - uses: actions/upload-artifact@v4
         if: always()

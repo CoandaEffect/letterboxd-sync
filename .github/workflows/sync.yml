@@ -1,10 +1,6 @@
 name: Sync Letterboxd watched films
 
 on:
-  push:
-    branches: [main]
-  schedule:
-    - cron: "0 6 */2 * *"  # Odd-numbered days at 6 AM UTC; GitHub may delay runs
   workflow_dispatch:
 
 permissions:

@@ -1,0 +1,29 @@
+{%- set d = states('sensor.letterboxd_green_health') | from_json({}) -%}
+{%- set t = as_timestamp(now()) -%}
+{%- set echo = as_timestamp(state_attr('automation.letterboxd_sync_health_echo', 'last_triggered'), 0) -%}
+{%- if d is not mapping or d.get('v') != 1
+      or d.get('h', 0) is not number or d.get('h', 0) <= 0
+      or d.get('h', 0) > t + 300
+      or d.get('a', 0) > t + 300 or d.get('s', 0) > t + 300
+      or (d.get('s', 0) > 0 and d.get('a', 0) == 0)
+      or d.get('p') not in ['startup', 'baseline', 'idle', 'syncing', 'paused', 'failed'] -%}
+  invalid_health
+{%- elif t - d.h > 2700 -%}
+  heartbeat_stale
+{%- elif echo <= 0 or echo > t + 300 or t - echo > 300 -%}
+  local_silence
+{%- elif d.p in ['paused', 'failed'] -%}
+  {{- d.p -}}
+{%- elif d.get('i') -%}
+  incident
+{%- elif d.get('m') != true -%}
+  inactive
+{%- elif d.get('b') != true -%}
+  baseline
+{%- elif d.p == 'idle' and d.get('a', 0) > 0 and d.get('s', 0) == 0 -%}
+  review_required
+{%- elif d.get('s', 0) > 0 -%}
+  success_seen
+{%- else -%}
+  {{- d.p -}}
+{%- endif -%}

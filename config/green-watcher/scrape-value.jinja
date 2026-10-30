@@ -1,0 +1,25 @@
+{%- set d = value | from_json({}) -%}
+{%- set valid = namespace(times=true) -%}
+{%- if d is mapping -%}
+  {%- for key in ['last_attempt_at', 'last_success_at', 'next_due_at'] -%}
+    {%- if key not in d or (d[key] is not none and as_timestamp(d[key], none) is none) -%}
+      {%- set valid.times = false -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- if d is mapping and d.get('schema_version') is integer and d.get('schema_version') == 1
+      and d.get('phase') in ['startup', 'baseline', 'idle', 'syncing', 'paused', 'failed']
+      and (d.get('monitoring_active') is sameas true or d.get('monitoring_active') is sameas false)
+      and (d.get('baseline_complete') is sameas true or d.get('baseline_complete') is sameas false)
+      and valid.times
+      and (d.get('incident') is none or d.get('incident') is mapping) -%}
+  {%- set i = d.get('incident') -%}
+  {{- {'v': 1, 'h': as_timestamp(d.get('heartbeat_at'), 0) | int,
+        'p': d.phase, 'm': d.monitoring_active, 'b': d.baseline_complete,
+        'a': as_timestamp(d.get('last_attempt_at'), 0) | int,
+        's': as_timestamp(d.get('last_success_at'), 0) | int,
+        'd': as_timestamp(d.get('next_due_at'), 0) | int,
+        'i': (i.get('code', 'unknown') | string)[:64] if i is mapping else '' if i is none else 'unknown'} | to_json -}}
+{%- else -%}
+  {{- '{}' -}}
+{%- endif -%}

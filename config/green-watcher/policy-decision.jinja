@@ -1,0 +1,63 @@
+{%- set n = notification if notification is mapping else {} -%}
+{%- set data = n.get('data', {}) -%}
+{%- set data = data if data is mapping else {} -%}
+{%- set tag = data.get('tag') -%}
+{%- set today = now().strftime('%Y-%m-%d') -%}
+{%- set t = as_timestamp(now()) | int -%}
+{%- set categories = {
+  'host_memory': 'mem', 'host_cpu': 'cpu', 'ha_latency': 'ha', 'mqtt_latency': 'mq',
+  'monitoring_missing': 'mon', 'worker_memory_failure': 'wrk',
+  'worker_wall_timeout': 'wrk', 'worker_resource_or_process_failure': 'wrk',
+  'worker_interrupted': 'wrk', 'worker_cleanup_unverified': 'wrk',
+  'post_sync_health_failed': 'wrk', 'baseline_coverage_missing': 'bs', 'sync_stale': 'sy'} -%}
+{%- set result = namespace(kind='quiet', key='', registry={}) -%}
+{%- set previous = states('input_text.letterboxd_green_urgent_notices') | from_json({}) -%}
+{%- if previous is mapping -%}
+  {%- for key, stamp in previous.items() -%}
+    {%- if key in ['mem', 'cpu', 'ha', 'mq', 'mon', 'wrk', 'bs', 'sy', 'hb', 'ps']
+          and stamp is number and stamp >= t - 86400 -%}
+      {%- set result.registry = dict(result.registry.items() | list + [(key, stamp | int)]) -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- if tag == 'letterboxd-sync' -%}
+  {%- if n.get('title') == 'Letterboxd Green daily summary'
+        and states('input_text.letterboxd_green_last_digest') != today -%}
+    {%- set result.kind = 'daily' -%}
+  {%- elif n.get('title') == 'Letterboxd Green alert' -%}
+    {%- set code = n.get('message', '') | replace(' ', '_') -%}
+    {%- set result.key = categories.get(code, '') -%}
+    {%- if code == 'sync_stale' -%}
+      {%- set packed = states('sensor.letterboxd_green_health') | from_json({}) -%}
+      {%- if packed is mapping and packed.get('b') is sameas true
+            and packed.get('p') == 'idle' and packed.get('a', 0) is number
+            and packed.get('a', 0) > 0 and packed.get('s') == 0 -%}
+        {%- set result.key = '' -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- elif tag == 'letterboxd_green_watcher' -%}
+  {%- set notice = data.get('letterboxd_notice') -%}
+  {%- if notice == 'paused' -%}
+    {%- set packed = states('sensor.letterboxd_green_health') | from_json({}) -%}
+    {%- set code = packed.get('i', '') if packed is mapping else '' -%}
+    {%- set result.key = categories.get(code, 'ps') -%}
+  {%- elif notice == 'heartbeat_stale' -%}
+    {%- set result.key = 'hb' -%}
+  {%- elif notice == 'local_silence' -%}
+    {%- set echo = as_timestamp(state_attr('automation.letterboxd_sync_health_echo', 'last_triggered'), none) -%}
+    {%- if echo is none or echo <= 0 -%}
+      {%- set entity = states.automation.letterboxd_sync_health_echo -%}
+      {%- set echo = as_timestamp(entity.last_changed, none) if entity is defined and entity is not none else none -%}
+    {%- endif -%}
+    {%- if echo is not none and t - echo >= 600 -%}
+      {%- set result.key = 'mon' -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if result.key and t - result.registry.get(result.key, 0) >= 86400 -%}
+  {%- set result.kind = 'urgent' -%}
+  {%- set result.registry = dict(result.registry.items() | list + [(result.key, t)]) -%}
+{%- endif -%}
+{{- {'kind': result.kind, 'key': result.key, 'day': today,
+      'registry': result.registry | to_json} | to_json -}}
