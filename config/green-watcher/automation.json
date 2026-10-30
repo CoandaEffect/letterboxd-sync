@@ -1,0 +1,69 @@
+{
+  "alias": "Letterboxd Green watcher alerts",
+  "description": "Native deterministic health notices with persistent deduplication.",
+  "triggers": [
+    {"trigger": "state", "entity_id": "sensor.letterboxd_green_watcher_notice"},
+    {"trigger": "homeassistant", "event": "start"},
+    {"trigger": "time_pattern", "minutes": "/5"}
+  ],
+  "conditions": [
+    {
+      "condition": "not",
+      "conditions": [
+        {"condition": "state", "entity_id": "sensor.letterboxd_green_watcher_notice", "state": ["quiet", "unknown", "unavailable"]}
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "variables": {
+        "noticekey": "{{ states('sensor.letterboxd_green_watcher_notice') }}",
+        "messages": {
+          "invalid_health": "Green health data is unavailable or invalid. Check the watcher data source.",
+          "heartbeat_stale": "Green's public health heartbeat is over 45 minutes old. The App or GitHub health delivery needs attention.",
+          "local_silence": "Green's local App health probe has been silent for over five minutes. Check App monitoring.",
+          "paused": "Green reports that the sync App is paused and needs attention.",
+          "failed": "Green reports a sync failure and needs attention.",
+          "incident": "Green reports an active incident. Check App status for details.",
+          "inactive": "Green reports that trial monitoring is inactive. Check App status.",
+          "review_required": "Green's first candidate appears ready for acceptance review. Publication remains held pending candidate and resource checks.",
+          "first_success": "Green has recorded its first successful sync. The native watcher remains active.",
+          "recovery": "Green health monitoring is reporting a healthy state again."
+        }
+      }
+    },
+    {
+      "action": "script.andrew_phone_notification",
+      "data": {
+        "notification": {
+          "title": "Letterboxd Green",
+          "message": "{{ messages.get(noticekey, 'Green watcher requires attention.') }}",
+          "data": {"tag": "letterboxd_green_watcher"}
+        }
+      }
+    },
+    {
+      "action": "persistent_notification.create",
+      "data": {
+        "notification_id": "letterboxd_green_watcher",
+        "title": "Letterboxd Green",
+        "message": "{{ messages.get(noticekey, 'Green watcher requires attention.') }}"
+      }
+    },
+    {
+      "action": "input_text.set_value",
+      "target": {"entity_id": "input_text.letterboxd_green_watcher_last_notice"},
+      "data": {"value": "{{ noticekey }}"}
+    },
+    {
+      "if": [
+        {"condition": "state", "entity_id": "input_text.letterboxd_green_watcher_last_notice", "state": "first_success"}
+      ],
+      "then": [
+        {"action": "input_boolean.turn_on", "target": {"entity_id": "input_boolean.letterboxd_green_first_success_notified"}}
+      ]
+    }
+  ],
+  "mode": "single",
+  "trace": {"stored_traces": 20}
+}
