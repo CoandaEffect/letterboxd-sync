@@ -1,5 +1,5 @@
 name: Letterboxd Sync
-version: "0.1.1"
+version: "0.1.2"
 slug: letterboxd_sync
 description: Guarded sync with health monitoring and a four-hour idle baseline.
 url: https://github.com/CoandaEffect/letterboxd-sync/tree/codex/ha-green-app/apps/letterboxd-sync
@@ -30,6 +30,7 @@ options:
   schedule: "0 6 */2 * *"
   active: false
   resume_nonce: ""
+  sync_request_nonce: ""
   approve_first_publish: false
   summary_timezone: America/Denver
   summary_hour: 18
@@ -42,6 +43,7 @@ schema:
   schedule: "list(0 6 */2 * *)"
   active: bool
   resume_nonce: str
+  sync_request_nonce: "match(^[A-Za-z0-9_-]{0,64}$)"
   approve_first_publish: bool
   summary_timezone: str
   summary_hour: "int(0,23)"

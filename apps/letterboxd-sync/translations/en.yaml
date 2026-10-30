@@ -22,6 +22,9 @@ configuration:
   resume_nonce:
     name: Reviewed resume request
     description: After reviewing a protective pause, change this value to request a resume. Healthy probes are still required; this does not reset the trial dates.
+  sync_request_nonce:
+    name: One-time full sync request
+    description: Set a new nonsecret token of up to 64 letters, digits, underscores, or hyphens to request one fresh export after first-publication approval. Safety gates and retry backoff still apply. Reusing a consumed token never runs again.
   summary_timezone:
     name: Daily summary timezone
   summary_hour:

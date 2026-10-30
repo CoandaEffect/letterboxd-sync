@@ -1,17 +1,6 @@
 name: Build Green Sync App
 
 on:
-  push:
-    branches: [codex/ha-green-app]
-    paths:
-      - apps/letterboxd-sync/**
-      - green_app/**
-      - tools/**
-      - tests/**
-      - scrape.py
-      - requirements.txt
-      - .dockerignore
-      - .github/workflows/build-green-app.yml
   workflow_dispatch:
 
 permissions:
@@ -24,11 +13,14 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/coandaeffect/letterboxd-sync-green
-  VERSION: "0.1.1"
+  VERSION: "0.1.2"
 
 jobs:
   build-test-publish:
-    if: github.repository == 'CoandaEffect/letterboxd-sync' && github.ref == 'refs/heads/codex/ha-green-app'
+    if: >-
+      github.repository == 'CoandaEffect/letterboxd-sync' &&
+      (github.ref == 'refs/heads/codex/ha-green-app' ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/green-local-watcher'))
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     steps:
