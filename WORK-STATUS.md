@@ -1,5 +1,9 @@
 # Green rollout task list
 
+Live acceptance state and receipts: local private ledger
+`.rollout-evidence/deployment-ledger.md`. The tracked notes below are implementation
+history; use the private ledger before making deployment changes.
+
 - [x] Read the supplied handoff and inspect the starting checkout.
 - [x] Fetch current remote branches without changing the working tree.
 - [x] Import the reviewed smoke script and match its handoff SHA-256.
