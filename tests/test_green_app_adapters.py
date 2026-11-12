@@ -160,6 +160,19 @@ class WorkerProcessTests(unittest.TestCase):
                 self.assertEqual(self.worker.completed(), expected)
                 self.assertTrue(self.worker.cleanup_verified)
 
+    def test_completed_worker_with_ordinary_error_requires_reported_error_exit(self):
+        self.worker.attempt_id = "fixture-attempt"
+        for mode, code, error in (
+            ("ordinary_error", 1, "ValueError"),
+            ("abnormal_error", 2, "worker_resource_or_process_failure"),
+            ("signaled_error", -signal.SIGKILL, "worker_resource_or_process_failure"),
+        ):
+            with self.subTest(mode=mode):
+                self.launch(mode)
+                self.assertEqual(self.worker.process.wait(timeout=2), code)
+                self.assertEqual(self.worker.completed(), {"ok": False, "error": error})
+                self.assertTrue(self.worker.cleanup_verified)
+
     def test_intentional_interrupt_discards_uncommitted_success_record(self):
         self.launch("child")
         self.worker.attempt_id = "fixture-attempt"
@@ -167,6 +180,16 @@ class WorkerProcessTests(unittest.TestCase):
             "ok": True, "attempt_id": "fixture-attempt",
         }))
         self.assertIsNone(self.worker.interrupt())
+        self.assertTrue(self.worker.cleanup_verified)
+
+    def test_intentional_interrupt_preserves_a_reported_memory_failure(self):
+        self.launch("child")
+        self.worker.attempt_id = "fixture-attempt"
+        result = {"ok": False, "error": "MemoryError"}
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "attempt_id": "fixture-attempt", **result,
+        }))
+        self.assertEqual(self.worker.interrupt(), result)
         self.assertTrue(self.worker.cleanup_verified)
 
     def test_worker_module_entrypoint_passes_attempt_id_to_main(self):

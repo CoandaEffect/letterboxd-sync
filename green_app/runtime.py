@@ -224,9 +224,13 @@ class Worker:
 
     def read_result(self, code, interrupted=False):
         result = self.read_attempt_result(self.attempt_id)
-        if result is None or (result["ok"] and code != 0):
-            return None if interrupted else {"ok": False, "error": "worker_resource_or_process_failure"}
-        return result
+        if result is not None:
+            if not result["ok"] and result["error"] == "MemoryError":
+                return result
+            expected_exit = 0 if result["ok"] else 1
+            if code == expected_exit:
+                return result
+        return None if interrupted else {"ok": False, "error": "worker_resource_or_process_failure"}
 
     def recovered_result(self, attempt_id):
         if not isinstance(attempt_id, str) or not attempt_id:
