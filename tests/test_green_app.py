@@ -357,6 +357,24 @@ class RuntimeTests(unittest.TestCase):
         self.coordinator.tick(NOW, sample(mqtt_ms=None))
         self.assertEqual(self.coordinator.state["pause"], "worker_memory_failure")
 
+    def test_deactivation_blocks_publication_of_completed_uncollected_worker(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="syncing", worker_inflight=True, reference_sha="same")
+        (self.path / "worker").mkdir()
+        (self.path / "worker" / "candidate.csv").write_bytes(CSV.replace(b"Film,2026", b"Renamed,2026"))
+        self.worker.running = False
+        self.worker.completed.return_value = {"ok": True, "duration_seconds": 20}
+        self.worker.interrupt.return_value = self.worker.completed.return_value
+        self.config.active = False
+
+        self.coordinator.tick(NOW, sample())
+
+        self.assertEqual(self.coordinator.state["pause"], "activation_disabled_during_sync")
+        self.assertFalse(self.coordinator.state["worker_inflight"])
+        self.assertIsNone(self.coordinator.state["last_success_at"])
+        self.github.write_export.assert_not_called()
+
     def test_worker_timeout_found_during_protective_stop_is_latched(self):
         self.manual_ready()
         self.coordinator.state.update(phase="syncing", worker_inflight=True)
@@ -438,6 +456,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.coordinator.state["last_outcome"], "failed")
 
     def test_memory_failure_latches_pause_before_any_automatic_retry(self):
+        self.config.active = True
         self.coordinator.state.update(trial_started_at=NOW.isoformat(),
             trial_ends_at=(NOW + timedelta(days=5)).isoformat(),
             baseline_ends_at=(NOW + timedelta(hours=4)).isoformat(),
@@ -618,6 +637,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertNotIn("pending_summary", self.coordinator.state)
 
     def test_worker_failure_never_publishes_candidate(self):
+        self.config.active = True
         self.coordinator.state.update(trial_started_at=NOW.isoformat(),
             trial_ends_at=(NOW + timedelta(days=5)).isoformat(),
             baseline_ends_at=(NOW + timedelta(hours=4)).isoformat(),

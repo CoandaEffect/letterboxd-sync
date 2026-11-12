@@ -148,6 +148,27 @@ class WorkerProcessTests(unittest.TestCase):
         self.assertEqual(self.worker.interrupt()["error"], "worker_wall_timeout")
         self.assertTrue(self.worker.cleanup_verified)
 
+    def test_completed_worker_with_success_record_requires_zero_exit(self):
+        self.worker.attempt_id = "fixture-attempt"
+        for mode, code, expected in (
+            ("successful_exit", 0, {"ok": True}),
+            ("abnormal_exit", 2, {"ok": False, "error": "worker_resource_or_process_failure"}),
+        ):
+            with self.subTest(mode=mode):
+                self.launch(mode)
+                self.assertEqual(self.worker.process.wait(timeout=2), code)
+                self.assertEqual(self.worker.completed(), expected)
+                self.assertTrue(self.worker.cleanup_verified)
+
+    def test_intentional_interrupt_discards_uncommitted_success_record(self):
+        self.launch("child")
+        self.worker.attempt_id = "fixture-attempt"
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "ok": True, "attempt_id": "fixture-attempt",
+        }))
+        self.assertIsNone(self.worker.interrupt())
+        self.assertTrue(self.worker.cleanup_verified)
+
     def test_worker_module_entrypoint_passes_attempt_id_to_main(self):
         attempt_id = "host-attempt"
         scraper = Mock()
