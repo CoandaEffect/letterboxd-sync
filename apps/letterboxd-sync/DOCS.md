@@ -101,13 +101,29 @@ Monitoring samples once per minute. Exports pause on:
 - host CPU above 80% for five consecutive samples;
 - HA response time above max(500 ms, three times baseline p95) for three samples;
 - MQTT round-trip above max(250 ms, three times baseline p95) for three samples;
-- three consecutive required-probe failures, worker errors, or unsafe recovery.
+- three consecutive samples with missing required measurements;
+- worker memory, process, or wall-time failures, or unverified worker cleanup.
 
-The worker is terminated as a process group. There is no overlapping export.
-An interrupted worker after restart latches a pause instead of silently retrying.
-Set a new `resume_nonce` value after investigating; healthy probes are required
-to resume. Restarting or resuming does not reset the trial clock. If cleanup
-cannot be verified, restart the App before resuming.
+For an active App, a `monitoring_missing` pause clears after three consecutive
+healthy samples spaced 50–70 seconds apart. A healthy sample has all four
+measurements within the limits above. A missed or unhealthy sample and an App
+restart reset the count. This lets the scheduler resume after Home Assistant or
+MQTT restarts. An already-approved deployment needs **Start on boot** enabled
+to bring the App back after a host restart.
+
+The App stops the worker process group when pausing or shutting down. A worker
+interrupted by an App or host restart can recover through the same healthy
+window after cleanup is verified. Interrupted work is discarded. A due sync
+runs a fresh scrape after the normal retry interval and checks the current
+GitHub export before publishing. An accepted one-shot request stays consumed,
+and the trial clock, baseline coverage, and first-publication approval still
+apply.
+
+A resource limit reached during a transient pause takes precedence. After
+investigating a latched safety pause, change `resume_nonce` and wait for a
+healthy sample. If cleanup was unverified, restart the App to verify cleanup
+before setting a new nonce. Logs record `automatic_resume` or `explicit_resume`
+with the reason that was cleared.
 
 Daily summaries are scheduled for 18:00 America/Denver by default and include
 baseline comparisons, resource peaks, outcomes, and missing samples. An incident

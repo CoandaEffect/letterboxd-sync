@@ -15,6 +15,9 @@ from .core import (Baseline, Guard, StateStore, UTC, atomic_bytes, healthy,
                    instant, next_schedule, public_health, validate_csv)
 
 
+RECOVERABLE_PAUSES = {"monitoring_missing", "worker_interrupted"}
+
+
 class Worker:
     def __init__(self, directory):
         self.directory = Path(directory) / "worker"
@@ -25,6 +28,7 @@ class Worker:
         self.lock = threading.RLock()
         self.timer = None
         self.pending_result = None
+        self.cleanup_verified = True
 
     @staticmethod
     def environment(username):
@@ -50,6 +54,20 @@ class Worker:
 
     def identity(self):
         return self.process_identity(self.pid) if self.pid else None
+
+    @staticmethod
+    def wait_for_group_exit(pid):
+        deadline = time.monotonic() + 2
+        while True:
+            try:
+                os.killpg(pid, 0)
+            except ProcessLookupError:
+                return True
+            except PermissionError:
+                return False
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(.05)
 
     def recover(self, identity, context):
         current_context = self.context()
@@ -78,7 +96,7 @@ class Worker:
                     break
                 time.sleep(.05)
             os.killpg(identity["pid"], signal.SIGKILL)
-            return True
+            return self.wait_for_group_exit(identity["pid"])
         except ProcessLookupError:
             return True
         except PermissionError:
@@ -99,6 +117,8 @@ class Worker:
             raise RuntimeError("worker_overlap_refused")
         if self.process is not None:
             self.stop()
+        if not self.cleanup_verified:
+            raise RuntimeError("worker_cleanup_unverified")
         self.pending_result = None
         for name in ("candidate.csv", "result.json"):
             (self.directory / name).unlink(missing_ok=True)
@@ -137,6 +157,7 @@ class Worker:
                 self.timer = None
             if self.process is None:
                 return None
+            self.cleanup_verified = False
             # The group may outlive its leader; the wall timer must stop both.
             try:
                 os.killpg(self.process.pid, signal.SIGTERM)
@@ -151,6 +172,7 @@ class Worker:
             except ProcessLookupError:
                 pass
             code = self.process.wait(timeout=2)
+            self.cleanup_verified = self.wait_for_group_exit(self.process.pid)
             self.process = None
             if self.log:
                 self.log.close()
@@ -159,6 +181,14 @@ class Worker:
     def completed(self):
         with self.lock:
             return self._completed()
+
+    def interrupt(self):
+        with self.lock:
+            result = self._completed()
+            if self.process is None:
+                return result
+            code = self.stop()
+            return result or self.read_result(code, interrupted=code in (-signal.SIGTERM, -signal.SIGKILL))
 
     def _completed(self):
         if self.pending_result is not None:
@@ -172,13 +202,18 @@ class Worker:
         code = self.stop()
         if timeout:
             return {"ok": False, "error": "worker_wall_timeout"}
+        return self.read_result(code)
+
+    def read_result(self, code, interrupted=False):
         try:
             result = json.loads((self.directory / "result.json").read_text())
+            if not isinstance(result, dict):
+                raise ValueError("worker_result_not_object")
             if code != 0:
                 result["ok"] = False
             return result
         except (OSError, ValueError):
-            return {"ok": False, "error": "worker_resource_or_process_failure"}
+            return None if interrupted else {"ok": False, "error": "worker_resource_or_process_failure"}
 
 
 class Coordinator:
@@ -188,14 +223,25 @@ class Coordinator:
         self.state = self.store.load()
         self.worker = worker or Worker(directory)
         self.guard = Guard(self.state.get("baseline_p95", {}), self.state["guard_counts"])
-        if self.state["phase"] == "syncing" or self.state.get("worker_cleanup_verified") is False:
+        self.recovery_samples = []
+        cleanup_pending = self.state.get("worker_cleanup_verified") is False
+        if self.state["phase"] == "syncing" or self.state.get("worker_inflight") or cleanup_pending:
             safe = self.worker.recover(self.state.get("worker_identity"), self.state.get("worker_context"))
             code = "worker_interrupted" if safe else "worker_cleanup_unverified"
-            self.state.update(phase="paused", current_incident=code, pause=code,
-                              pause_resume_nonce=config.resume_nonce, worker_cleanup_verified=bool(safe),
+            prior = self.state.get("pause")
+            reason = prior if prior and (safe or prior not in RECOVERABLE_PAUSES) else code
+            if reason != prior or cleanup_pending:
+                self.state["pause_resume_nonce"] = config.resume_nonce
+            self.state.update(phase="paused", current_incident=reason, pause=reason,
+                              scheduler_enabled=False, worker_cleanup_verified=bool(safe),
                               worker_inflight=False, last_outcome="failed", candidate_pending=False)
-            self.incident(code, datetime.now(UTC))
+            now = datetime.now(UTC)
+            if not safe or reason == code:
+                self.incident(code, now)
+            elif cleanup_pending:
+                self.recover("worker_cleanup_unverified", now)
             self.store.save(self.state)
+        self.update_incident_state()
 
     def event(self, code, now, **values):
         record = {"at": now.isoformat(), "code": code, **values}
@@ -292,20 +338,62 @@ class Coordinator:
         self.store.save(self.state)
 
     def pause(self, reason, now):
-        if self.state.get("pause"):
+        prior = self.state.get("pause")
+        if prior and (prior not in RECOVERABLE_PAUSES or reason in RECOVERABLE_PAUSES):
             return
+        self.recovery_samples.clear()
         self.state.update(pause=reason, phase="paused", scheduler_enabled=False,
                           pause_resume_nonce=self.config.resume_nonce)
         self.store.save(self.state)
-        self.worker.stop()
-        self.state["worker_inflight"] = False
+        if not prior:
+            reason = self.interrupt_worker(reason)
+            self.state["pause"] = reason
+            self.store.save(self.state)
         self.event("protective_pause", now, reason=reason)
         self.incident(reason, now)
 
+    def interrupt_worker(self, reason):
+        result = self.worker.interrupt()
+        if result:
+            self.state["worker_result"] = result
+        verified = self.worker.cleanup_verified
+        self.state.update(worker_inflight=False, worker_cleanup_verified=verified)
+        if reason in RECOVERABLE_PAUSES:
+            return self.worker_safety_failure(result) or (reason if verified else "worker_cleanup_unverified")
+        return reason
+
+    def resource_failed(self, sample):
+        return any(failed for _, failed, _ in self.guard.resource_rules(sample))
+
     def ready(self, sample):
-        return (healthy(sample) and sample["available_mib"] >= 512 and sample["cpu_percent"] <= 80
-                and sample["ha_ms"] <= max(500, 3 * (self.state.get("baseline_p95", {}).get("ha_ms") or 0))
-                and sample["mqtt_ms"] <= max(250, 3 * (self.state.get("baseline_p95", {}).get("mqtt_ms") or 0)))
+        return healthy(sample) and not self.resource_failed(sample)
+
+    def resume_if_ready(self, now, sample):
+        reason = self.state["pause"]
+        cleanup = self.state.get("worker_cleanup_verified")
+        if not reason or cleanup is False or self.state.get("worker_inflight") or not self.ready(sample):
+            self.recovery_samples.clear()
+            return
+        nonce = self.config.resume_nonce
+        explicit = nonce and nonce != self.state.get("pause_resume_nonce", "")
+        if not explicit:
+            if (not self.config.active or reason not in RECOVERABLE_PAUSES
+                    or reason == "worker_interrupted" and cleanup is not True):
+                self.recovery_samples.clear()
+                return
+            if self.recovery_samples and not 50 <= (now - self.recovery_samples[-1]).total_seconds() <= 70:
+                self.recovery_samples.clear()
+            self.recovery_samples.append(now)
+            if len(self.recovery_samples) < 3:
+                return
+        self.state.update(pause=None, phase="idle")
+        if explicit:
+            self.state["resume_nonce"] = nonce
+        self.recovery_samples.clear()
+        self.guard.counts.clear()
+        self.recover(reason, now)
+        self.update_incident_state()
+        self.event("explicit_resume" if explicit else "automatic_resume", now, reason=reason)
 
     def start_trial(self, now, sample):
         if not self.ready(sample):
@@ -345,21 +433,22 @@ class Coordinator:
         self.state["last_attempt_at"] = now.isoformat()
         self.state["attempt_retry_at"] = (now + timedelta(minutes=15)).isoformat()
         self.store.save(self.state)
-        started = False
         try:
             reference, sha = self.github.fetch_export()
             validate_csv(reference, reference)
             self.state.update(reference_sha=sha, phase="syncing", worker_inflight=True,
-                              worker_identity=None, worker_context=self.worker.context())
+                              worker_identity=None, worker_context=self.worker.context(),
+                              worker_cleanup_verified=None)
             self.store.save(self.state)
             self.worker.start(reference, self.config.username)
-            started = True
             self.state["worker_identity"] = self.worker.identity()
             self.store.save(self.state)
             self.event("sync_started", now)
         except Exception:
-            if started:
-                self.worker.stop()
+            if self.state.get("worker_inflight"):
+                reason = self.interrupt_worker("worker_interrupted")
+                if reason != "worker_interrupted":
+                    self.pause(reason, now)
             self.failed_sync("sync_start_failed", now)
 
     def manual_request(self, now):
@@ -387,12 +476,37 @@ class Coordinator:
         self.start_sync(now)
 
     def failed_sync(self, code, now):
-        self.state.update(last_outcome="failed", phase="failed", worker_inflight=False,
+        self.state.update(last_outcome="failed", phase="paused" if self.state["pause"] else "failed", worker_inflight=False,
                           candidate_pending=False)
         self.state["outcomes"].append({"at": now.isoformat(), "outcome": "failed", "reason": code})
         self.state["outcomes"] = self.state["outcomes"][-32:]
         self.incident(code, now)
         self.store.save(self.state)
+
+    @staticmethod
+    def worker_safety_failure(result):
+        error = result.get("error") if result and not result.get("ok") else None
+        if error == "MemoryError":
+            return "worker_memory_failure"
+        if error in ("worker_resource_or_process_failure", "worker_wall_timeout"):
+            return error
+        return None
+
+    def finish_worker(self, now, sample, result):
+        self.state.update(worker_result=result, worker_inflight=False)
+        code = self.worker_safety_failure(result)
+        if not self.worker.cleanup_verified:
+            code = code or "worker_cleanup_unverified"
+        if code:
+            self.pause(code, now)
+            self.failed_sync(code, now)
+        elif not result.get("ok"):
+            self.failed_sync("sync_failed", now)
+        elif self.ready(sample):
+            self.finish_candidate(now)
+        else:
+            reason = "post_sync_health_failed" if self.resource_failed(sample) else "monitoring_missing"
+            self.pause(reason, now)
 
     def finish_candidate(self, now):
         try:
@@ -489,18 +603,22 @@ class Coordinator:
             self.log_status(now)
             self.store.save(self.state)
             return
-        if (self.state["pause"] and self.config.resume_nonce and
-                self.state.get("worker_cleanup_verified") is not False and
-                self.config.resume_nonce != self.state.get("pause_resume_nonce", "") and self.ready(sample)):
-            reason = self.state["pause"]
-            self.state.update(pause=None, phase="idle", resume_nonce=self.config.resume_nonce)
-            self.guard.counts.clear()
-            self.recover(reason, now)
-            self.event("explicit_resume", now)
+        reason = None
         if self.config.active or self.state["trial_started_at"]:
             reason = self.guard.check(sample)
-            if reason:
+            if reason and reason != "monitoring_missing":
                 self.pause(reason, now)
+        if self.state["trial_started_at"]:
+            if not self.config.active and self.worker.running:
+                self.pause("activation_disabled_during_sync", now)
+            if self.state.get("worker_inflight") and not self.state["pause"]:
+                result = self.worker.completed()
+                if result is not None:
+                    force_status = True
+                    self.finish_worker(now, sample, result)
+        if reason == "monitoring_missing":
+            self.pause(reason, now)
+        self.resume_if_ready(now, sample)
         if self.config.active and not self.state["trial_started_at"] and not self.state["pause"]:
             self.start_trial(now, sample)
         if self.state["trial_started_at"]:
@@ -524,26 +642,6 @@ class Coordinator:
                 if now > instant(self.state["baseline_ends_at"]) + timedelta(minutes=2):
                     self.incident("baseline_coverage_missing", now)
             self.state["scheduler_enabled"] = bool(self.config.active and self.state["baseline_complete"] and not self.state["pause"])
-            if not self.config.active and self.worker.running:
-                self.pause("activation_disabled_during_sync", now)
-            if self.state.get("worker_inflight") and not self.state["pause"]:
-                result = self.worker.completed()
-                if result is not None:
-                    force_status = True
-                    self.state["worker_result"] = result
-                    self.state["worker_inflight"] = False
-                    if result.get("ok") and self.ready(sample):
-                        self.finish_candidate(now)
-                    elif result.get("ok"):
-                        self.pause("post_sync_health_failed", now)
-                    else:
-                        error = result.get("error")
-                        if error in ("MemoryError", "worker_resource_or_process_failure", "worker_wall_timeout"):
-                            code = "worker_memory_failure" if error == "MemoryError" else error
-                            self.failed_sync(code, now)
-                            self.pause(code, now)
-                        else:
-                            self.failed_sync("sync_failed", now)
             if self.state["scheduler_enabled"] and self.ready(sample):
                 if self.state["candidate_pending"]:
                     if self.config.approve_first_publish:
@@ -558,7 +656,7 @@ class Coordinator:
             due = instant(self.state["next_due_at"])
             if self.state["baseline_complete"] and due and now > due + timedelta(hours=6):
                 self.incident("sync_stale", now)
-            if healthy(sample):
+            if healthy(sample) and self.state["pause"] != "monitoring_missing":
                 self.recover("monitoring_missing", now)
             self.daily_summary(now, sample)
         for code, incident in list(self.state["incidents"].items()):
@@ -571,9 +669,11 @@ class Coordinator:
         self.store.save(self.state)
 
     def shutdown(self):
-        if self.worker.process is not None:
-            self.worker.stop()
-            self.state.update(phase="paused", pause="worker_interrupted", worker_inflight=False,
-                              pause_resume_nonce=self.config.resume_nonce, worker_cleanup_verified=True,
-                              last_outcome="failed", current_incident="worker_interrupted")
+        if self.worker.process is not None or self.state.get("worker_inflight"):
+            prior = self.state["pause"]
+            reason = self.interrupt_worker(prior or "worker_interrupted")
+            if reason != prior:
+                self.state["pause_resume_nonce"] = self.config.resume_nonce
+            self.state.update(phase="paused", pause=reason, scheduler_enabled=False, candidate_pending=False,
+                              last_outcome="failed", current_incident=reason)
             self.store.save(self.state)
