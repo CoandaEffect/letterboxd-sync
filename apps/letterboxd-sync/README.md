@@ -7,7 +7,7 @@ round-trip time. It starts inactive. It installs no packages on the Green.
 The production-client diagnostic passed on an actual Green on October 29,
 2026. That establishes the network/client gate; a full export and the five-day
 observation have separate acceptance checks. See [WORK-STATUS.md](../../WORK-STATUS.md)
-for the current deployment state and [DOCS.md](DOCS.md) for operation.
+for rollout history and [DOCS.md](DOCS.md) for operation.
 
 The coordinator holds the repository credential. A separate low-priority
 worker receives only CSV input and output paths, runs as an unprivileged UID,
@@ -20,6 +20,8 @@ candidate export is validated and held for review. Later successful runs use
 the same odd-calendar-day schedule at 06:00 UTC as the hosted workflow. A valid
 unchanged export counts as a successful run.
 
-Five days is the observation period, including the idle baseline. It does not
-automatically uninstall or stop a healthy App. A protection trip pauses exports
-until an explicit healthy resume; monitoring and alert retries continue.
+The App continues running after the five-day observation period, which includes
+the idle baseline. When active, it clears pauses for missing monitoring or
+worker interruptions with verified cleanup after three consecutive healthy
+minute samples. Latched safety pauses require investigation and an explicit
+healthy resume. Monitoring and alert retries continue during a pause.
