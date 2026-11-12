@@ -354,13 +354,16 @@ class Coordinator:
 
     def interrupt_worker(self, reason):
         result = self.worker.interrupt()
-        if result:
-            self.state["worker_result"] = result
-        verified = self.worker.cleanup_verified
-        self.state.update(worker_inflight=False, worker_cleanup_verified=verified)
+        self.record_worker_exit(result)
         if reason in RECOVERABLE_PAUSES:
-            return self.worker_safety_failure(result) or (reason if verified else "worker_cleanup_unverified")
+            return self.worker_safety_failure(result) or (
+                reason if self.state["worker_cleanup_verified"] else "worker_cleanup_unverified")
         return reason
+
+    def record_worker_exit(self, result):
+        self.state.update(worker_inflight=False, worker_cleanup_verified=self.worker.cleanup_verified)
+        if result is not None:
+            self.state["worker_result"] = result
 
     def resource_failed(self, sample):
         return any(failed for _, failed, _ in self.guard.resource_rules(sample))
@@ -438,7 +441,7 @@ class Coordinator:
             validate_csv(reference, reference)
             self.state.update(reference_sha=sha, phase="syncing", worker_inflight=True,
                               worker_identity=None, worker_context=self.worker.context(),
-                              worker_cleanup_verified=None)
+                              worker_cleanup_verified=False)
             self.store.save(self.state)
             self.worker.start(reference, self.config.username)
             self.state["worker_identity"] = self.worker.identity()
@@ -476,7 +479,7 @@ class Coordinator:
         self.start_sync(now)
 
     def failed_sync(self, code, now):
-        self.state.update(last_outcome="failed", phase="paused" if self.state["pause"] else "failed", worker_inflight=False,
+        self.state.update(last_outcome="failed", phase="paused" if self.state["pause"] else "failed",
                           candidate_pending=False)
         self.state["outcomes"].append({"at": now.isoformat(), "outcome": "failed", "reason": code})
         self.state["outcomes"] = self.state["outcomes"][-32:]
@@ -493,9 +496,9 @@ class Coordinator:
         return None
 
     def finish_worker(self, now, sample, result):
-        self.state.update(worker_result=result, worker_inflight=False)
+        self.record_worker_exit(result)
         code = self.worker_safety_failure(result)
-        if not self.worker.cleanup_verified:
+        if not self.state["worker_cleanup_verified"]:
             code = code or "worker_cleanup_unverified"
         if code:
             self.pause(code, now)
@@ -520,14 +523,14 @@ class Coordinator:
             self.state["candidate_summary"] = summary
             atomic_bytes(self.directory / "candidate-summary.json", json.dumps(summary, sort_keys=True).encode())
             if not self.state["first_published"] and not self.config.approve_first_publish:
-                self.state.update(candidate_pending=True, phase="idle", worker_inflight=False)
+                self.state.update(candidate_pending=True, phase="idle")
                 self.event("first_candidate_review_required", now, **{k: v for k, v in summary.items() if k != "at"})
                 self.log_status(now, force=True)
                 self.store.save(self.state)
                 return
             if candidate != current:
                 self.github.write_export(candidate, sha)
-            self.state.update(first_published=True, candidate_pending=False, worker_inflight=False,
+            self.state.update(first_published=True, candidate_pending=False,
                 last_success_at=now.isoformat(), next_due_at=next_schedule(now).isoformat(), phase="idle",
                 last_outcome="unchanged" if candidate == current else "published")
             self.state["outcomes"].append({"at": now.isoformat(), "outcome": self.state["last_outcome"],

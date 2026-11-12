@@ -358,6 +358,57 @@ class RuntimeTests(unittest.TestCase):
         self.coordinator.tick(NOW + timedelta(minutes=1), sample())
         self.assertEqual(self.coordinator.state["pause"], "worker_cleanup_unverified")
 
+    def test_crash_after_first_pause_save_keeps_unverified_group_latched(self):
+        class CoordinatorCrashed(BaseException):
+            pass
+
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state["next_due_at"] = NOW.isoformat()
+        identity = {"pid": 999, "start_ticks": "100", "group": 999, "session": 999}
+        context = {"boot_id": "boot", "pid_namespace": "namespace"}
+        self.worker.identity.return_value = identity
+        self.worker.context.return_value = context
+        self.coordinator.start_sync(NOW)
+        self.worker.start.reset_mock()
+        self.worker.completed.return_value = {"ok": True}
+        self.worker.cleanup_verified = False
+        save = self.coordinator.store.save
+
+        def save_and_crash(state):
+            save(state)
+            if state["phase"] == "paused":
+                raise CoordinatorCrashed
+
+        with patch.object(self.coordinator.store, "save", side_effect=save_and_crash), \
+                self.assertRaises(CoordinatorCrashed):
+            at = NOW + timedelta(minutes=1)
+            self.coordinator.tick(at, sample(at))
+        persisted = self.coordinator.store.load()
+
+        self.worker.cleanup_verified = True
+        self.worker.recover.return_value = False
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        self.worker.recover.assert_called_once_with(identity, context)
+        self.assertIs(persisted["worker_cleanup_verified"], False)
+        self.config.resume_nonce = "requested-before-cleanup"
+        at = NOW + timedelta(minutes=15)
+        replacement.tick(at, sample(at))
+        self.assertEqual(replacement.state["pause"], "worker_cleanup_unverified")
+        self.worker.start.assert_not_called()
+        self.github.write_export.assert_not_called()
+
+        self.worker.recover.return_value = True
+        verified = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        at += timedelta(minutes=1)
+        verified.tick(at, sample(at))
+        self.assertEqual(verified.state["pause"], "worker_cleanup_unverified")
+        self.config.resume_nonce = "requested-after-cleanup"
+        at += timedelta(minutes=1)
+        verified.tick(at, sample(at))
+        self.assertIsNone(verified.state["pause"])
+        self.worker.start.assert_called_once()
+
     def test_publication_conflict_preserves_current_export(self):
         self.github.fetch_export.return_value = (CSV, "sha-after")
         self.coordinator.state["reference_sha"] = "sha-before"
