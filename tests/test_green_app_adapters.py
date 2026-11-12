@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import runpy
 import signal
 import subprocess
 import sys
@@ -146,6 +147,20 @@ class WorkerProcessTests(unittest.TestCase):
         self.worker.deadline(self.worker.process)
         self.assertEqual(self.worker.interrupt()["error"], "worker_wall_timeout")
         self.assertTrue(self.worker.cleanup_verified)
+
+    def test_worker_module_entrypoint_passes_attempt_id_to_main(self):
+        attempt_id = "host-attempt"
+        scraper = Mock()
+        scraper.read_previous_rows.side_effect = MemoryError
+        argv = ["green_app.worker", str(self.worker.directory), "unused", attempt_id]
+        with patch.object(sys, "argv", argv), patch.dict(sys.modules, {"scrape": scraper}), \
+                patch("resource.setrlimit"), patch("os.nice"), patch("signal.alarm"), \
+                self.assertRaises(SystemExit) as exit_status:
+            runpy.run_module("green_app.worker", run_name="__main__", alter_sys=True)
+        self.assertEqual(exit_status.exception.code, 1)
+        result = json.loads((self.worker.directory / "result.json").read_text())
+        self.assertEqual(result["attempt_id"], attempt_id)
+        self.assertEqual(result["error"], "MemoryError")
 
     def test_abrupt_restart_recovers_timeout_recorded_before_group_stop(self):
         self.launch("child")

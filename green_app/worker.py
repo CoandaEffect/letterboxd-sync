@@ -54,4 +54,4 @@ def main(directory, username, attempt_id):
 
 
 if __name__ == "__main__":
-    sys.exit(self_check() if sys.argv[1:] == ["--self-check"] else main(sys.argv[1], sys.argv[2]))
+    sys.exit(self_check() if sys.argv[1:] == ["--self-check"] else main(*sys.argv[1:]))
