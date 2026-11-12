@@ -104,6 +104,13 @@ Monitoring samples once per minute. Exports pause on:
 - three consecutive samples with missing required measurements;
 - worker memory, process, or wall-time failures, or unverified worker cleanup.
 
+Publication requires a healthy sample when a worker finishes. If even one
+required measurement is missing and the measured values are within limits, the
+App immediately discards the result and enters `monitoring_missing`. A measured
+limit violation at completion latches a safety pause. Disabling activation
+during a running scrape also latches a pause. Ordinary scrape errors follow
+the existing retry policy.
+
 For an active App, a `monitoring_missing` pause clears after three consecutive
 healthy samples spaced 50–70 seconds apart. A healthy sample has all four
 measurements within the limits above. A missed or unhealthy sample and an App
@@ -128,6 +135,26 @@ with the reason that was cleared.
 Daily summaries are scheduled for 18:00 America/Denver by default and include
 baseline comparisons, resource peaks, outcomes, and missing samples. An incident
 is deduplicated, and recovery is reported once after delivery acceptance.
+
+## Release an App update
+
+1. Use the same version in [App metadata](config.yaml), the [Dockerfile](Dockerfile),
+   and the [Build Green Sync App workflow](../../.github/workflows/build-green-app.yml).
+2. Manually run **Build Green Sync App** from the permitted branch containing the
+   reviewed commit (`codex/restart-recovery` for 0.1.3). Check the native ARM64
+   test results and confirm that the version and `sha-<reviewed commit>` tags
+   resolve to the same manifest digest.
+3. Promote the exact reviewed App source and metadata to `codex/ha-green-app`.
+   Refresh the App repository in Home Assistant and update **Letterboxd Sync**.
+   Check the installed version, healthy startup probes, and scheduler status.
+4. On an active, baseline-complete App with no worker running, temporarily
+   disable only the dedicated MQTT echo. Expect a `monitoring_missing` pause
+   after three missing samples. Re-enable the echo after the check, including
+   if the pause did not appear. Confirm `automatic_resume` and the enabled
+   scheduler with the resume nonce unchanged.
+   Verify a fresh export through a due run or a new one-shot request. Check
+   `sync_success` and the updated last success time. If the run publishes a
+   change, verify the resulting CSV commit.
 
 ## Evidence and rollback
 

@@ -7,7 +7,7 @@ round-trip time. It starts inactive. It installs no packages on the Green.
 The production-client diagnostic passed on an actual Green on October 29,
 2026. That establishes the network/client gate; a full export and the five-day
 observation have separate acceptance checks. See [WORK-STATUS.md](../../WORK-STATUS.md)
-for rollout history and [DOCS.md](DOCS.md) for operation.
+for the original rollout history and [DOCS.md](DOCS.md) for current setup and operation.
 
 The coordinator holds the repository credential. A separate low-priority
 worker receives only CSV input and output paths, runs as an unprivileged UID,
