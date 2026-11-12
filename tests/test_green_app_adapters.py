@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import runpy
 import signal
 import subprocess
 import sys
@@ -12,7 +13,7 @@ import urllib.error
 import urllib.request
 
 from green_app.adapters import APIError, GitHub, JSONAPI, Local, MQTTProbe, NoRedirect, replace_leaves
-from green_app.core import Config
+from green_app.core import Config, StateStore
 from green_app.runtime import Coordinator, Worker
 
 
@@ -111,12 +112,14 @@ class WorkerProcessTests(unittest.TestCase):
         with patch("green_app.runtime.os.killpg", wraps=os.killpg) as kill:
             result = self.worker.completed()
         self.assertEqual(result["error"], "worker_wall_timeout")
-        self.assertEqual([call.args[1] for call in kill.call_args_list], [signal.SIGTERM, signal.SIGKILL])
+        self.assertEqual([call.args[1] for call in kill.call_args_list if call.args[1]],
+                         [signal.SIGTERM, signal.SIGKILL])
+        self.assertTrue(self.worker.cleanup_verified)
 
     def test_running_worker_rejects_overlap(self):
         self.launch("child")
         with self.assertRaisesRegex(RuntimeError, "overlap"):
-            self.worker.start(b"unused", "unused")
+            self.worker.start(b"unused", "unused", "unused")
 
     def test_dead_leader_deadline_still_kills_surviving_descendant(self):
         self.launch("orphan")
@@ -125,8 +128,10 @@ class WorkerProcessTests(unittest.TestCase):
         import os
         with patch("green_app.runtime.os.killpg", wraps=os.killpg) as kill:
             self.worker.deadline(process)
-        self.assertEqual([call.args[1] for call in kill.call_args_list], [signal.SIGTERM, signal.SIGKILL])
+        self.assertEqual([call.args[1] for call in kill.call_args_list if call.args[1]],
+                         [signal.SIGTERM, signal.SIGKILL])
         self.assertIsNone(self.worker.process)
+        self.assertTrue(self.worker.cleanup_verified)
         self.assertEqual(self.worker.completed()["error"], "worker_wall_timeout")
 
     def test_shutdown_cleans_group_when_leader_already_exited(self):
@@ -135,6 +140,155 @@ class WorkerProcessTests(unittest.TestCase):
         coordinator = Coordinator(Config(), Path(self.directory.name), Mock(), Mock(), self.worker)
         coordinator.shutdown()
         self.assertIsNone(self.worker.process)
+        self.assertTrue(coordinator.state["worker_cleanup_verified"])
+
+    def test_interrupt_reports_wall_timeout_and_group_cleanup(self):
+        self.launch("child")
+        self.worker.deadline(self.worker.process)
+        self.assertEqual(self.worker.interrupt()["error"], "worker_wall_timeout")
+        self.assertTrue(self.worker.cleanup_verified)
+
+    def test_completed_worker_with_success_record_requires_zero_exit(self):
+        self.worker.attempt_id = "fixture-attempt"
+        for mode, code, expected in (
+            ("successful_exit", 0, {"ok": True}),
+            ("abnormal_exit", 2, {"ok": False, "error": "worker_resource_or_process_failure"}),
+        ):
+            with self.subTest(mode=mode):
+                self.launch(mode)
+                self.assertEqual(self.worker.process.wait(timeout=2), code)
+                self.assertEqual(self.worker.completed(), expected)
+                self.assertTrue(self.worker.cleanup_verified)
+
+    def test_completed_worker_with_ordinary_error_requires_reported_error_exit(self):
+        self.worker.attempt_id = "fixture-attempt"
+        for mode, code, error in (
+            ("ordinary_error", 1, "ValueError"),
+            ("abnormal_error", 2, "worker_resource_or_process_failure"),
+            ("signaled_error", -signal.SIGKILL, "worker_resource_or_process_failure"),
+        ):
+            with self.subTest(mode=mode):
+                self.launch(mode)
+                self.assertEqual(self.worker.process.wait(timeout=2), code)
+                self.assertEqual(self.worker.completed(), {"ok": False, "error": error})
+                self.assertTrue(self.worker.cleanup_verified)
+
+    def test_intentional_interrupt_discards_uncommitted_success_record(self):
+        self.launch("child")
+        self.worker.attempt_id = "fixture-attempt"
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "ok": True, "attempt_id": "fixture-attempt",
+        }))
+        self.assertIsNone(self.worker.interrupt())
+        self.assertTrue(self.worker.cleanup_verified)
+
+    def test_intentional_interrupt_preserves_a_reported_memory_failure(self):
+        self.launch("child")
+        self.worker.attempt_id = "fixture-attempt"
+        result = {"ok": False, "error": "MemoryError"}
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "attempt_id": "fixture-attempt", **result,
+        }))
+        self.assertEqual(self.worker.interrupt(), result)
+        self.assertTrue(self.worker.cleanup_verified)
+
+    def test_worker_module_entrypoint_passes_attempt_id_to_main(self):
+        attempt_id = "host-attempt"
+        scraper = Mock()
+        scraper.read_previous_rows.side_effect = MemoryError
+        argv = ["green_app.worker", str(self.worker.directory), "unused", attempt_id]
+        with patch.object(sys, "argv", argv), patch.dict(sys.modules, {"scrape": scraper}), \
+                patch("resource.setrlimit"), patch("os.nice"), patch("signal.alarm"), \
+                self.assertRaises(SystemExit) as exit_status:
+            runpy.run_module("green_app.worker", run_name="__main__", alter_sys=True)
+        self.assertEqual(exit_status.exception.code, 1)
+        result = json.loads((self.worker.directory / "result.json").read_text())
+        self.assertEqual(result["attempt_id"], attempt_id)
+        self.assertEqual(result["error"], "MemoryError")
+
+    def test_abrupt_restart_recovers_timeout_recorded_before_group_stop(self):
+        self.launch("child")
+        attempt_id = "timed-out-attempt"
+        self.worker.attempt_id = attempt_id
+        coordinator = Coordinator(Config(), self.directory.name, Mock(), Mock(), self.worker)
+        coordinator.state.update(phase="syncing", worker_inflight=True, worker_attempt_id=attempt_id)
+        coordinator.store.save(coordinator.state)
+        stop = self.worker.stop
+
+        def stop_after_checking_evidence():
+            marker = Path(self.directory.name) / "worker-timeout.json"
+            self.assertEqual(json.loads(marker.read_text()),
+                             {"attempt_id": attempt_id, "error": "worker_wall_timeout"})
+            self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+            return stop()
+
+        with patch.object(self.worker, "stop", side_effect=stop_after_checking_evidence):
+            self.worker.deadline(self.worker.process)
+        replacement = Worker(self.directory.name)
+        with patch.object(replacement, "recover", return_value=True):
+            resumed = Coordinator(Config(), self.directory.name, Mock(), Mock(), replacement)
+        self.assertEqual(resumed.state["pause"], "worker_wall_timeout")
+        self.assertFalse(resumed.state["worker_inflight"])
+        self.assertFalse(resumed.state["candidate_pending"])
+
+    def test_restart_retains_matching_worker_safety_result(self):
+        store = StateStore(self.directory.name)
+        state = store.load()
+        state.update(phase="syncing", worker_inflight=True, worker_attempt_id="failed-attempt")
+        store.save(state)
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "attempt_id": "failed-attempt", "ok": False, "error": "MemoryError",
+        }))
+        with patch.object(self.worker, "recover", return_value=True):
+            replacement = Coordinator(Config(), self.directory.name, Mock(), Mock(), self.worker)
+        self.assertEqual(replacement.state["pause"], "worker_memory_failure")
+
+    def test_restart_latches_malformed_timeout_evidence(self):
+        store = StateStore(self.directory.name)
+        state = store.load()
+        state.update(phase="syncing", worker_inflight=True, worker_attempt_id="attempt")
+        store.save(state)
+        (Path(self.directory.name) / "worker-timeout.json").write_text("{")
+        with patch.object(self.worker, "recover", return_value=True):
+            replacement = Coordinator(Config(), self.directory.name, Mock(), Mock(), self.worker)
+        self.assertEqual(replacement.state["pause"], "worker_timeout_record_unreadable")
+
+    def test_old_safety_evidence_cannot_attach_to_attempt_that_crashes_before_launch(self):
+        class CoordinatorCrashed(BaseException):
+            pass
+
+        (Path(self.directory.name) / "worker-timeout.json").write_text(json.dumps({
+            "attempt_id": "old-attempt", "error": "worker_wall_timeout",
+        }))
+        (self.worker.directory / "result.json").write_text(json.dumps({
+            "attempt_id": "old-attempt", "ok": False, "error": "MemoryError",
+        }))
+        github = Mock()
+        github.fetch_export.return_value = (
+            b"Name,Year,Rating,Liked,Watch Date,Runtime,Rewatched,Letterboxd URI\n"
+            b"Film,2026,,,,90,,https://letterboxd.com/film/film/\n", "same",
+        )
+        coordinator = Coordinator(Config(), self.directory.name, github, Mock(), self.worker)
+        coordinator.state["worker_attempt_id"] = "old-attempt"
+        with patch.object(self.worker, "start", side_effect=CoordinatorCrashed), \
+                self.assertRaises(CoordinatorCrashed):
+            coordinator.start_sync(datetime.now(timezone.utc))
+        persisted = coordinator.store.load()
+        self.assertTrue(persisted["worker_inflight"])
+        self.assertNotEqual(persisted["worker_attempt_id"], "old-attempt")
+        with patch.object(self.worker, "recover", return_value=True):
+            replacement = Coordinator(Config(), self.directory.name, Mock(), Mock(), self.worker)
+        self.assertEqual(replacement.state["pause"], "worker_interrupted")
+
+    def test_legacy_restart_does_not_assume_an_unbound_result_belongs_to_the_worker(self):
+        store = StateStore(self.directory.name)
+        state = store.load()
+        state.update(phase="syncing", worker_inflight=True)
+        store.save(state)
+        (self.worker.directory / "result.json").write_text('{"ok": false, "error": "MemoryError"}')
+        with patch.object(self.worker, "recover", return_value=True):
+            replacement = Coordinator(Config(), self.directory.name, Mock(), Mock(), self.worker)
+        self.assertEqual(replacement.state["pause"], "worker_interrupted")
 
     def test_recovery_does_not_kill_reused_pid_or_unknown_orphan_group(self):
         context = {"boot_id": "boot", "pid_namespace": "namespace"}
@@ -156,6 +310,19 @@ class WorkerProcessTests(unittest.TestCase):
             self.assertTrue(self.worker.recover({"pid": 999}, {"pid_namespace": "old"}))
             kill.assert_not_called()
 
+    def test_same_context_recovery_requires_group_exit_after_signalling(self):
+        context = {"boot_id": "boot", "pid_namespace": "namespace"}
+        identity = {"pid": 999, "start_ticks": "100", "group": 999, "session": 999}
+        for gone in (True, False):
+            with self.subTest(gone=gone), patch.object(self.worker, "context", return_value=context), \
+                    patch.object(self.worker, "process_identity", side_effect=[identity, None]), \
+                    patch("green_app.runtime.os.killpg", side_effect=[None, None,
+                          ProcessLookupError() if gone else None]) as kill, \
+                    patch("green_app.runtime.time.monotonic", side_effect=[0, 1, 2, 5]):
+                self.assertEqual(self.worker.recover(identity, context), gone)
+                self.assertEqual([call.args[1] for call in kill.call_args_list],
+                                 [signal.SIGTERM, signal.SIGKILL, 0])
+
     @unittest.skipUnless(sys.platform.startswith("linux"), "Linux address-space enforcement")
     def test_actual_address_space_failure_is_reported_without_candidate(self):
         self.launch("memory")
@@ -173,6 +340,20 @@ class WorkerProcessTests(unittest.TestCase):
         status = json.loads(result.stdout)
         self.assertTrue(status["native_imports"])
         self.assertLess(status["memory"]["VmPeak_mib"], 256)
+
+    @unittest.skipUnless(sys.platform.startswith("linux") and Path("/opt/packages").is_dir(),
+                         "Packaged Linux image dependency layout")
+    def test_packaged_worker_entrypoint_records_the_attempt_id(self):
+        attempt_id = "packaged-attempt"
+        self.worker.start(b"\xff", "unused", attempt_id)
+        self.worker.process.wait(timeout=30)
+        result = self.worker.completed()
+        self.assertEqual(result["error"], "UnicodeDecodeError")
+        self.assertFalse(result["ok"])
+        self.assertTrue(self.worker.cleanup_verified)
+        record = json.loads((self.worker.directory / "result.json").read_text())
+        self.assertEqual(record["attempt_id"], attempt_id)
+        self.assertFalse((self.worker.directory / "candidate.csv").exists())
 
 
 if __name__ == "__main__":

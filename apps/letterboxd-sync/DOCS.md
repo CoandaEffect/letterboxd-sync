@@ -101,17 +101,78 @@ Monitoring samples once per minute. Exports pause on:
 - host CPU above 80% for five consecutive samples;
 - HA response time above max(500 ms, three times baseline p95) for three samples;
 - MQTT round-trip above max(250 ms, three times baseline p95) for three samples;
-- three consecutive required-probe failures, worker errors, or unsafe recovery.
+- three consecutive samples with missing required measurements;
+- worker memory, process, or wall-time failures, or unverified worker cleanup.
 
-The worker is terminated as a process group. There is no overlapping export.
-An interrupted worker after restart latches a pause instead of silently retrying.
-Set a new `resume_nonce` value after investigating; healthy probes are required
-to resume. Restarting or resuming does not reset the trial clock. If cleanup
-cannot be verified, restart the App before resuming.
+Publication requires a healthy sample when a worker finishes. If even one
+required measurement is missing and the measured values are within limits, the
+App immediately discards the result and enters `monitoring_missing`. A measured
+limit violation at completion latches a safety pause. Disabling activation
+before the App collects the result also latches a pause. A success record
+requires exit status 0. An ordinary scrape-error record follows the existing
+retry policy after exit status 1. An unexpected exit observed during normal
+result collection latches a worker safety pause.
+
+For an active App, a `monitoring_missing` pause clears after three consecutive
+healthy samples spaced 50–70 seconds apart. A healthy sample has all four
+measurements within the limits above. A missed or unhealthy sample and an App
+restart reset the count. This lets the scheduler resume after Home Assistant or
+MQTT restarts. An already-approved deployment needs **Start on boot** enabled
+to bring the App back after a host restart.
+
+The App stops the worker process group when pausing or shutting down. A worker
+interrupted by an App or host restart can recover through the same healthy
+window after cleanup is verified. Interrupted work is discarded. A due sync
+runs a fresh scrape after the normal retry interval and checks the current
+GitHub export before publishing. An accepted one-shot request stays consumed,
+and the trial clock, baseline coverage, and first-publication approval still
+apply.
+
+The coordinator records a detected wall timeout before terminating the worker.
+On restart, a recorded timeout or worker safety failure for that attempt
+still requires manual resume after cleanup is verified. For
+`worker_timeout_record_unreadable`, the App has verified cleanup. This repair
+requires maintenance access to Letterboxd Sync's private data volume. Resolve
+any storage error, stop Letterboxd Sync, and move only the unreadable
+`worker-timeout.json` from its data volume to private diagnostic storage.
+Preserve `green-state.json` and valid records. Start the App before supplying
+the new resume nonce.
+
+A resource limit reached during a transient pause takes precedence. After
+investigating a latched safety pause, change `resume_nonce` and wait for a
+healthy sample. If cleanup was unverified, restart the App to verify cleanup
+before setting a new nonce. Logs record `automatic_resume` or `explicit_resume`
+with the reason that was cleared.
 
 Daily summaries are scheduled for 18:00 America/Denver by default and include
 baseline comparisons, resource peaks, outcomes, and missing samples. An incident
 is deduplicated, and recovery is reported once after delivery acceptance.
+
+## Release an App update
+
+1. Use the same version in [App metadata](config.yaml), the [Dockerfile](Dockerfile),
+   and the [Build Green Sync App workflow](../../.github/workflows/build-green-app.yml).
+2. Manually run **Build Green Sync App** from the permitted branch containing the
+   reviewed commit (`codex/restart-recovery` for 0.1.3). Check the native ARM64
+   test results and confirm that the version and `sha-<reviewed commit>` tags
+   resolve to the same manifest digest.
+3. Promote the exact reviewed App source and metadata to `codex/ha-green-app`.
+   Refresh the App repository in Home Assistant and update **Letterboxd Sync**.
+   Check the installed version, healthy startup probes, and scheduler status.
+4. On an active, baseline-complete App with no worker running, temporarily
+   disable only the dedicated MQTT echo. Expect a `monitoring_missing` pause
+   after three missing samples. Re-enable the echo after the check, including
+   if the pause did not appear. Confirm `automatic_resume` and the enabled
+   scheduler with the resume nonce unchanged.
+   Verify a fresh export through a due run or a new one-shot request. Check
+   `sync_success` and the updated last success time. If the run publishes a
+   change, verify the resulting CSV commit.
+
+If publication is interrupted after either tag appears, check both digests
+and the saved native ARM64 test and startup results for the reviewed commit.
+When both tags match and the evidence passed, record the digest and continue
+with that image. For incomplete or mismatched publication, choose a new
+unused version and repeat the release from step 1. Preserve existing tags.
 
 ## Evidence and rollback
 

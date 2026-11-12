@@ -27,7 +27,7 @@ def self_check():
     return 0
 
 
-def main(directory, username):
+def main(directory, username, attempt_id):
     guard_resources()
     directory = Path(directory)
     started = time.monotonic()
@@ -48,9 +48,10 @@ def main(directory, username):
         result = {"ok": False, "error": type(error).__name__,
                   "duration_seconds": time.monotonic() - started}
     from .core import atomic_bytes
+    result["attempt_id"] = attempt_id
     atomic_bytes(directory / "result.json", json.dumps(result).encode())
     return 0 if result["ok"] else 1
 
 
 if __name__ == "__main__":
-    sys.exit(self_check() if sys.argv[1:] == ["--self-check"] else main(sys.argv[1], sys.argv[2]))
+    sys.exit(self_check() if sys.argv[1:] == ["--self-check"] else main(*sys.argv[1:]))

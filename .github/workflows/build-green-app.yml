@@ -13,14 +13,16 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/coandaeffect/letterboxd-sync-green
-  VERSION: "0.1.2"
+  VERSION: "0.1.3"
 
 jobs:
   build-test-publish:
     if: >-
       github.repository == 'CoandaEffect/letterboxd-sync' &&
       (github.ref == 'refs/heads/codex/ha-green-app' ||
-       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/green-local-watcher'))
+       (github.event_name == 'workflow_dispatch' &&
+        (github.ref == 'refs/heads/codex/green-local-watcher' ||
+         github.ref == 'refs/heads/codex/restart-recovery')))
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     steps:
@@ -38,7 +40,7 @@ jobs:
         run: mkdir -p app-test-results
       - name: Offline tests and actual native worker guards
         run: >-
-          docker run --rm --platform linux/arm64 --network none --read-only
+          docker run --rm --init --platform linux/arm64 --network none --read-only
           --tmpfs /tmp:rw,nosuid,nodev,noexec,size=32m
           --tmpfs /data:rw,nosuid,nodev,noexec,size=32m
           --memory 512m --memory-swap 512m --pids-limit 64
