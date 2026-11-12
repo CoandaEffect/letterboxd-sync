@@ -126,6 +126,11 @@ GitHub export before publishing. An accepted one-shot request stays consumed,
 and the trial clock, baseline coverage, and first-publication approval still
 apply.
 
+The coordinator records a detected wall timeout before terminating the worker.
+On restart, a recorded timeout or worker safety failure for that attempt
+still requires manual resume after cleanup is verified. Unreadable timeout
+evidence also requires investigation and manual resume.
+
 A resource limit reached during a transient pause takes precedence. After
 investigating a latched safety pause, change `resume_nonce` and wait for a
 healthy sample. If cleanup was unverified, restart the App to verify cleanup

@@ -119,6 +119,7 @@ class RuntimeTests(unittest.TestCase):
         self.worker.context.return_value = None
         self.worker.identity.return_value = None
         self.worker.interrupt.return_value = None
+        self.worker.recovered_result.return_value = None
         self.worker.cleanup_verified = True
         self.coordinator = Coordinator(self.config, self.path, self.github, self.local, self.worker)
 
@@ -314,6 +315,24 @@ class RuntimeTests(unittest.TestCase):
             at = NOW + timedelta(minutes=minute)
             self.coordinator.tick(at, sample(at))
         self.assertEqual(self.coordinator.state["pause"], "host_cpu")
+        self.worker.start.assert_not_called()
+
+    def test_explicit_resume_recovers_interruption_after_escalated_resource_pause(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="syncing", worker_inflight=True)
+        self.coordinator.store.save(self.coordinator.state)
+        self.worker.recover.return_value = True
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        self.assertEqual(replacement.state["pause"], "worker_interrupted")
+        replacement.tick(NOW, sample(available_mib=511))
+        self.assertEqual(replacement.state["pause"], "host_memory")
+        self.config.resume_nonce = "reviewed"
+        at = NOW + timedelta(minutes=1)
+        replacement.tick(at, sample(at))
+        self.assertIsNone(replacement.state["pause"])
+        self.assertIsNone(replacement.state["current_incident"])
+        self.assertFalse(replacement.state["incidents"]["worker_interrupted"]["active"])
         self.worker.start.assert_not_called()
 
     def test_successful_worker_during_probe_outage_discards_candidate(self):
@@ -628,16 +647,19 @@ class RuntimeTests(unittest.TestCase):
         clocks = {key: self.coordinator.state[key] for key in
                   ("trial_started_at", "trial_ends_at", "baseline_ends_at")}
 
-        def start(reference, username):
+        def start(reference, username, attempt_id):
             persisted = self.coordinator.store.load()
             self.assertTrue(persisted["consumed_sync_requests"])
             self.assertTrue(persisted["worker_inflight"])
+            self.assertIs(persisted["worker_cleanup_verified"], False)
+            self.assertEqual(persisted["worker_attempt_id"], attempt_id)
             (self.path / "worker").mkdir()
             (self.path / "worker" / "candidate.csv").write_bytes(candidate)
 
         self.worker.start.side_effect = start
         self.coordinator.tick(NOW, sample())
-        self.worker.start.assert_called_once_with(CSV, self.config.username)
+        self.worker.start.assert_called_once_with(CSV, self.config.username,
+                                                  self.coordinator.state["worker_attempt_id"])
         self.github.write_export.assert_not_called()
         self.worker.completed.return_value = {"ok": True, "duration_seconds": 20}
         finished = NOW + timedelta(minutes=1)
@@ -762,7 +784,8 @@ class RuntimeTests(unittest.TestCase):
             self.assertTrue(self.coordinator.state["baseline_complete"])
             self.assertEqual(self.coordinator.state["baseline_samples"], [])
             self.assertEqual(self.coordinator.state["baseline_coverage"]["valid_minutes"], 240)
-            self.worker.start.assert_called_once_with(CSV, self.config.username)
+            self.worker.start.assert_called_once_with(CSV, self.config.username,
+                                                      self.coordinator.state["worker_attempt_id"])
             self.assertIsNone(self.coordinator.state["last_success_at"])
             (self.path / "worker").mkdir()
             (self.path / "worker" / "candidate.csv").write_bytes(CSV)
