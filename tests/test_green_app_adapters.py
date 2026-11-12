@@ -111,7 +111,9 @@ class WorkerProcessTests(unittest.TestCase):
         with patch("green_app.runtime.os.killpg", wraps=os.killpg) as kill:
             result = self.worker.completed()
         self.assertEqual(result["error"], "worker_wall_timeout")
-        self.assertEqual([call.args[1] for call in kill.call_args_list], [signal.SIGTERM, signal.SIGKILL])
+        self.assertEqual([call.args[1] for call in kill.call_args_list if call.args[1]],
+                         [signal.SIGTERM, signal.SIGKILL])
+        self.assertTrue(self.worker.cleanup_verified)
 
     def test_running_worker_rejects_overlap(self):
         self.launch("child")
@@ -125,8 +127,10 @@ class WorkerProcessTests(unittest.TestCase):
         import os
         with patch("green_app.runtime.os.killpg", wraps=os.killpg) as kill:
             self.worker.deadline(process)
-        self.assertEqual([call.args[1] for call in kill.call_args_list], [signal.SIGTERM, signal.SIGKILL])
+        self.assertEqual([call.args[1] for call in kill.call_args_list if call.args[1]],
+                         [signal.SIGTERM, signal.SIGKILL])
         self.assertIsNone(self.worker.process)
+        self.assertTrue(self.worker.cleanup_verified)
         self.assertEqual(self.worker.completed()["error"], "worker_wall_timeout")
 
     def test_shutdown_cleans_group_when_leader_already_exited(self):
@@ -135,6 +139,13 @@ class WorkerProcessTests(unittest.TestCase):
         coordinator = Coordinator(Config(), Path(self.directory.name), Mock(), Mock(), self.worker)
         coordinator.shutdown()
         self.assertIsNone(self.worker.process)
+        self.assertTrue(coordinator.state["worker_cleanup_verified"])
+
+    def test_interrupt_reports_wall_timeout_and_group_cleanup(self):
+        self.launch("child")
+        self.worker.deadline(self.worker.process)
+        self.assertEqual(self.worker.interrupt()["error"], "worker_wall_timeout")
+        self.assertTrue(self.worker.cleanup_verified)
 
     def test_recovery_does_not_kill_reused_pid_or_unknown_orphan_group(self):
         context = {"boot_id": "boot", "pid_namespace": "namespace"}
@@ -155,6 +166,19 @@ class WorkerProcessTests(unittest.TestCase):
                 patch("green_app.runtime.os.killpg") as kill:
             self.assertTrue(self.worker.recover({"pid": 999}, {"pid_namespace": "old"}))
             kill.assert_not_called()
+
+    def test_same_context_recovery_requires_group_exit_after_signalling(self):
+        context = {"boot_id": "boot", "pid_namespace": "namespace"}
+        identity = {"pid": 999, "start_ticks": "100", "group": 999, "session": 999}
+        for gone in (True, False):
+            with self.subTest(gone=gone), patch.object(self.worker, "context", return_value=context), \
+                    patch.object(self.worker, "process_identity", side_effect=[identity, None]), \
+                    patch("green_app.runtime.os.killpg", side_effect=[None, None,
+                          ProcessLookupError() if gone else None]) as kill, \
+                    patch("green_app.runtime.time.monotonic", side_effect=[0, 1, 2, 5]):
+                self.assertEqual(self.worker.recover(identity, context), gone)
+                self.assertEqual([call.args[1] for call in kill.call_args_list],
+                                 [signal.SIGTERM, signal.SIGKILL, 0])
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "Linux address-space enforcement")
     def test_actual_address_space_failure_is_reported_without_candidate(self):

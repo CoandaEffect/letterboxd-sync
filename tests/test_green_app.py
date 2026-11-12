@@ -118,6 +118,8 @@ class RuntimeTests(unittest.TestCase):
         self.worker.running = False
         self.worker.context.return_value = None
         self.worker.identity.return_value = None
+        self.worker.interrupt.return_value = None
+        self.worker.cleanup_verified = True
         self.coordinator = Coordinator(self.config, self.path, self.github, self.local, self.worker)
 
     def test_inactive_never_starts_clock_or_worker(self):
@@ -238,7 +240,7 @@ class RuntimeTests(unittest.TestCase):
         self.coordinator.pause("host_memory", NOW)
         self.coordinator.pause("host_memory", NOW)
         self.local.notify.assert_called_once()
-        self.worker.stop.assert_called_once()
+        self.worker.interrupt.assert_called_once()
         reloaded = StateStore(self.path).load()
         self.assertEqual(reloaded["pause"], "host_memory")
         self.assertTrue(reloaded["incidents"]["host_memory"]["notified"])
@@ -250,6 +252,111 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(self.coordinator.state["pause"])
         self.coordinator.tick(NOW, sample())
         self.assertIsNone(self.coordinator.state["pause"])
+
+    def test_explicit_resume_clears_stale_incident_from_older_state(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="paused", pause="monitoring_missing",
+            current_incident="monitoring_missing",
+            incidents={"monitoring_missing": {"active": False, "notified": True}})
+        self.config.resume_nonce = "reviewed"
+        self.coordinator.tick(NOW, sample())
+        self.assertIsNone(self.coordinator.state["current_incident"])
+        self.assertTrue(self.coordinator.state["scheduler_enabled"])
+
+    def test_upgrade_clears_stale_incident_after_earlier_resume(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(current_incident="monitoring_missing",
+            incidents={"monitoring_missing": {"active": False, "notified": True}})
+        self.coordinator.store.save(self.coordinator.state)
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        replacement.tick(NOW, sample())
+        self.assertIsNone(replacement.state["current_incident"])
+        self.assertIsNone(self.github.heartbeat.call_args.args[0]["incident"])
+
+    def test_persisted_monitoring_pause_requires_a_fresh_healthy_window(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="paused", pause="monitoring_missing",
+            scheduler_enabled=False, next_due_at=NOW.isoformat(),
+            current_incident="monitoring_missing",
+            incidents={"monitoring_missing": {"active": False, "notified": True}})
+        self.coordinator.store.save(self.coordinator.state)
+        self.coordinator.tick(NOW, sample())
+        self.coordinator.tick(NOW + timedelta(minutes=1), sample())
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        for seconds, changes in [
+            (120, {}), (121, {}), (122, {}), (180, {"ha_ms": 501}),
+            (240, {}), (360, {}), (420, {}), (480, {"mqtt_ms": None}),
+            (540, {}), (600, {}),
+        ]:
+            at = NOW + timedelta(seconds=seconds)
+            replacement.tick(at, sample(at, **changes))
+            self.assertEqual(replacement.state["pause"], "monitoring_missing")
+            self.assertFalse(replacement.state["scheduler_enabled"])
+            self.worker.start.assert_not_called()
+        at = NOW + timedelta(minutes=11)
+        replacement.tick(at, sample(at))
+        self.assertIsNone(replacement.state["pause"])
+        self.assertIsNone(replacement.state["current_incident"])
+        self.assertTrue(replacement.state["scheduler_enabled"])
+        self.worker.start.assert_called_once()
+
+    def test_monitoring_pause_escalates_to_resource_pause(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        for minute in range(5):
+            at = NOW + timedelta(minutes=minute)
+            self.coordinator.tick(at, sample(at, ha_ms=None, cpu_percent=90))
+        self.assertEqual(self.coordinator.state["pause"], "host_cpu")
+        for minute in range(5, 9):
+            at = NOW + timedelta(minutes=minute)
+            self.coordinator.tick(at, sample(at))
+        self.assertEqual(self.coordinator.state["pause"], "host_cpu")
+        self.worker.start.assert_not_called()
+
+    def test_successful_worker_during_probe_outage_discards_candidate(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="syncing", worker_inflight=True, next_due_at=NOW.isoformat())
+        self.worker.completed.return_value = {"ok": True}
+        self.coordinator.tick(NOW, sample(ha_ms=None))
+        self.assertEqual(self.coordinator.state["pause"], "monitoring_missing")
+        for minute in range(1, 4):
+            at = NOW + timedelta(minutes=minute)
+            self.coordinator.tick(at, sample(at))
+        self.assertIsNone(self.coordinator.state["pause"])
+        self.worker.start.assert_called_once()
+        self.github.write_export.assert_not_called()
+
+    def test_worker_resource_failure_wins_when_monitoring_pause_would_start(self):
+        self.manual_ready()
+        self.coordinator.state.update(phase="syncing", worker_inflight=True)
+        self.coordinator.state["guard_counts"]["monitoring_missing"] = 2
+        self.worker.completed.return_value = {"ok": False, "error": "MemoryError"}
+        self.coordinator.tick(NOW, sample(mqtt_ms=None))
+        self.assertEqual(self.coordinator.state["pause"], "worker_memory_failure")
+
+    def test_worker_timeout_found_during_protective_stop_is_latched(self):
+        self.manual_ready()
+        self.coordinator.state.update(phase="syncing", worker_inflight=True)
+        self.coordinator.state["guard_counts"]["monitoring_missing"] = 2
+        self.worker.interrupt.return_value = {"ok": False, "error": "worker_wall_timeout"}
+        self.coordinator.tick(NOW, sample(mqtt_ms=None))
+        self.assertEqual(self.coordinator.state["pause"], "worker_wall_timeout")
+
+    def test_monitoring_pause_requires_verified_worker_group_exit(self):
+        self.manual_ready()
+        self.coordinator.state.update(phase="syncing", worker_inflight=True)
+        self.coordinator.state["guard_counts"]["monitoring_missing"] = 2
+        self.worker.cleanup_verified = False
+        self.coordinator.tick(NOW, sample(mqtt_ms=None))
+        self.assertEqual(self.coordinator.state["pause"], "worker_cleanup_unverified")
+        self.assertFalse(self.coordinator.store.load()["worker_cleanup_verified"])
+        self.config.resume_nonce = "changed"
+        self.coordinator.tick(NOW + timedelta(minutes=1), sample())
+        self.assertEqual(self.coordinator.state["pause"], "worker_cleanup_unverified")
 
     def test_publication_conflict_preserves_current_export(self):
         self.github.fetch_export.return_value = (CSV, "sha-after")
@@ -324,23 +431,44 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(replacement.state["baseline_complete"])
         self.worker.start.assert_not_called()
 
-    def test_interrupted_worker_restart_clears_inflight_and_requires_explicit_resume(self):
-        self.coordinator.state.update(phase="syncing", worker_inflight=True,
-            trial_started_at=NOW.isoformat(), trial_ends_at=(NOW + timedelta(days=5)).isoformat(),
-            baseline_ends_at=(NOW + timedelta(hours=4)).isoformat(), next_due_at=NOW.isoformat(),
-            baseline_complete=True)
+    def test_verified_interrupted_worker_recovers_without_replaying_manual_nonce(self):
+        self.manual_ready()
+        self.coordinator.accept_manual_request(self.coordinator.manual_request(NOW), NOW)
+        self.coordinator.state.update(candidate_pending=True)
         self.coordinator.store.save(self.coordinator.state)
+        self.worker.start.reset_mock()
         self.worker.recover.return_value = True
         replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
         self.assertFalse(replacement.state["worker_inflight"])
+        self.assertFalse(replacement.state["candidate_pending"])
         self.assertEqual(replacement.state["pause"], "worker_interrupted")
-        replacement.tick(NOW, sample())
-        self.worker.start.assert_not_called()
-        self.config.active = True
-        self.config.resume_nonce = "reviewed-after-restart"
-        replacement.tick(NOW + timedelta(minutes=1), sample())
+        for minute in (1, 2, 3):
+            at = NOW + timedelta(minutes=minute)
+            replacement.tick(at, sample(at))
         self.assertIsNone(replacement.state["pause"])
+        self.assertTrue(replacement.state["scheduler_enabled"])
+        self.worker.start.assert_not_called()
+        replacement.state["next_due_at"] = NOW.isoformat()
+        at = NOW + timedelta(minutes=15)
+        replacement.tick(at, sample(at))
         self.worker.start.assert_called_once()
+        self.github.write_export.assert_not_called()
+
+    def test_restart_during_protective_stop_preserves_hard_pause(self):
+        self.manual_ready()
+        self.coordinator.state.update(phase="paused", pause="host_memory", worker_inflight=True,
+            pause_resume_nonce="prior")
+        self.coordinator.store.save(self.coordinator.state)
+        self.worker.recover.return_value = True
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        self.worker.recover.assert_called_once()
+        self.assertFalse(replacement.state["worker_inflight"])
+        self.assertEqual(replacement.state["pause"], "host_memory")
+        for minute in (1, 2, 3):
+            at = NOW + timedelta(minutes=minute)
+            replacement.tick(at, sample(at))
+        self.assertEqual(replacement.state["pause"], "host_memory")
+        self.worker.start.assert_not_called()
 
     def test_unverified_orphan_cleanup_blocks_even_explicit_resume(self):
         self.coordinator.state.update(phase="syncing", worker_inflight=True)
@@ -350,6 +478,48 @@ class RuntimeTests(unittest.TestCase):
         self.config.resume_nonce = "changed"
         replacement.tick(NOW, sample())
         self.assertEqual(replacement.state["pause"], "worker_cleanup_unverified")
+        self.worker.start.assert_not_called()
+        self.worker.recover.return_value = True
+        verified = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        self.config.active = True
+        for minute in (1, 2, 3):
+            at = NOW + timedelta(minutes=minute)
+            verified.tick(at, sample(at))
+        self.assertEqual(verified.state["pause"], "worker_cleanup_unverified")
+
+    def test_graceful_shutdown_waits_for_health_and_discards_interrupted_candidate(self):
+        self.manual_ready()
+        self.config.sync_request_nonce = ""
+        self.coordinator.state.update(phase="syncing", worker_inflight=True, candidate_pending=True,
+            next_due_at=NOW.isoformat())
+        self.worker.process = Mock()
+        self.coordinator.shutdown()
+        self.worker.interrupt.assert_called_once()
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        self.worker.recover.assert_not_called()
+        self.assertFalse(replacement.state["candidate_pending"])
+        self.assertEqual(replacement.state["pause"], "worker_interrupted")
+        for minute in (1, 2):
+            at = NOW + timedelta(minutes=minute)
+            replacement.tick(at, sample(at))
+            self.worker.start.assert_not_called()
+        at = NOW + timedelta(minutes=3)
+        replacement.tick(at, sample(at))
+        self.assertIsNone(replacement.state["pause"])
+        self.worker.start.assert_called_once()
+        self.github.write_export.assert_not_called()
+
+    def test_graceful_shutdown_latches_a_pending_worker_timeout(self):
+        self.manual_ready()
+        self.coordinator.state.update(phase="syncing", worker_inflight=True)
+        self.worker.process = None
+        self.worker.interrupt.return_value = {"ok": False, "error": "worker_wall_timeout"}
+        self.coordinator.shutdown()
+        replacement = Coordinator(self.config, self.path, self.github, self.local, self.worker)
+        for minute in (1, 2, 3):
+            at = NOW + timedelta(minutes=minute)
+            replacement.tick(at, sample(at))
+        self.assertEqual(replacement.state["pause"], "worker_wall_timeout")
         self.worker.start.assert_not_called()
 
     def test_recovery_delivery_is_persisted_and_retries_with_backoff(self):
@@ -564,6 +734,15 @@ class RuntimeTests(unittest.TestCase):
             self.coordinator.tick(at, sample(at, mqtt_ms=None))
         self.assertIsNone(self.coordinator.state["trial_started_at"])
         self.assertEqual(self.coordinator.state["pause"], "monitoring_missing")
+        for minute in (3, 4, 5):
+            at = NOW + timedelta(minutes=minute)
+            self.coordinator.tick(at, sample(at))
+        self.assertIsNone(self.coordinator.state["pause"])
+        self.assertIsNone(self.coordinator.state["trial_started_at"])
+        at = NOW + timedelta(minutes=6)
+        self.coordinator.tick(at, sample(at))
+        self.assertEqual(self.coordinator.state["trial_started_at"], at.isoformat())
+        self.worker.start.assert_not_called()
 
     def test_baseline_gap_blocks_initial_sync_and_reports_missing_coverage(self):
         self.config.active = True

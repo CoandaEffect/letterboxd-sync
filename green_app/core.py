@@ -121,14 +121,16 @@ class Guard:
         self.baseline = baseline
         self.counts = counts if counts is not None else {}
 
-    def check(self, sample):
-        rules = [
+    def resource_rules(self, sample):
+        return [
             ("host_memory", sample.get("available_mib") is not None and sample["available_mib"] < 512, 1),
             ("host_cpu", sample.get("cpu_percent") is not None and sample["cpu_percent"] > 80, 5),
             ("ha_latency", sample.get("ha_ms") is not None and sample["ha_ms"] > max(500, 3 * (self.baseline.get("ha_ms") or 0)), 3),
             ("mqtt_latency", sample.get("mqtt_ms") is not None and sample["mqtt_ms"] > max(250, 3 * (self.baseline.get("mqtt_ms") or 0)), 3),
-            ("monitoring_missing", not healthy(sample), 3),
         ]
+
+    def check(self, sample):
+        rules = self.resource_rules(sample) + [("monitoring_missing", not healthy(sample), 3)]
         reason = None
         for name, failed, required in rules:
             self.counts[name] = self.counts.get(name, 0) + 1 if failed else 0
