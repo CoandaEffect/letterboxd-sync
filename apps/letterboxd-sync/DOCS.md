@@ -108,8 +108,9 @@ Publication requires a healthy sample when a worker finishes. If even one
 required measurement is missing and the measured values are within limits, the
 App immediately discards the result and enters `monitoring_missing`. A measured
 limit violation at completion latches a safety pause. Disabling activation
-during a running scrape also latches a pause. Ordinary scrape errors follow
-the existing retry policy.
+before the App collects the result also latches a pause. A success record
+requires a zero worker exit status. Ordinary scrape errors follow the existing
+retry policy.
 
 For an active App, a `monitoring_missing` pause clears after three consecutive
 healthy samples spaced 50–70 seconds apart. A healthy sample has all four

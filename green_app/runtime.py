@@ -224,10 +224,8 @@ class Worker:
 
     def read_result(self, code, interrupted=False):
         result = self.read_attempt_result(self.attempt_id)
-        if result is None:
+        if result is None or (result["ok"] and code != 0):
             return None if interrupted else {"ok": False, "error": "worker_resource_or_process_failure"}
-        if code != 0:
-            result["ok"] = False
         return result
 
     def recovered_result(self, attempt_id):
@@ -656,7 +654,7 @@ class Coordinator:
             if reason and reason != "monitoring_missing":
                 self.pause(reason, now)
         if self.state["trial_started_at"]:
-            if not self.config.active and self.worker.running:
+            if not self.config.active and (self.state.get("worker_inflight") or self.worker.running):
                 self.pause("activation_disabled_during_sync", now)
             if self.state.get("worker_inflight") and not self.state["pause"]:
                 result = self.worker.completed()

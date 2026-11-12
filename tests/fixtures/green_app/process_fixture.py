@@ -17,6 +17,10 @@ if mode == "memory":
         (directory / "result.json").write_text(json.dumps({"ok": False, "error": "MemoryError"}))
         sys.exit(1)
     sys.exit(2)
+if mode in ("successful_exit", "abnormal_exit"):
+    (directory / "result.json").write_text(json.dumps({"ok": True, "attempt_id": "fixture-attempt"}))
+    (directory / (mode + ".ready")).write_text("ready")
+    sys.exit(0 if mode == "successful_exit" else 2)
 signal.signal(signal.SIGTERM, signal.SIG_IGN)
 if mode in ("parent", "orphan"):
     child = subprocess.Popen([sys.executable, __file__, "child", str(directory)])
