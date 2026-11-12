@@ -109,8 +109,9 @@ required measurement is missing and the measured values are within limits, the
 App immediately discards the result and enters `monitoring_missing`. A measured
 limit violation at completion latches a safety pause. Disabling activation
 before the App collects the result also latches a pause. A success record
-requires a zero worker exit status. Ordinary scrape errors follow the existing
-retry policy.
+requires exit status 0. An ordinary scrape-error record follows the existing
+retry policy after exit status 1. An unexpected exit observed during normal
+result collection latches a worker safety pause.
 
 For an active App, a `monitoring_missing` pause clears after three consecutive
 healthy samples spaced 50–70 seconds apart. A healthy sample has all four
@@ -129,8 +130,13 @@ apply.
 
 The coordinator records a detected wall timeout before terminating the worker.
 On restart, a recorded timeout or worker safety failure for that attempt
-still requires manual resume after cleanup is verified. Unreadable timeout
-evidence also requires investigation and manual resume.
+still requires manual resume after cleanup is verified. For
+`worker_timeout_record_unreadable`, the App has verified cleanup. This repair
+requires maintenance access to Letterboxd Sync's private data volume. Resolve
+any storage error, stop Letterboxd Sync, and move only the unreadable
+`worker-timeout.json` from its data volume to private diagnostic storage.
+Preserve `green-state.json` and valid records. Start the App before supplying
+the new resume nonce.
 
 A resource limit reached during a transient pause takes precedence. After
 investigating a latched safety pause, change `resume_nonce` and wait for a
@@ -161,6 +167,12 @@ is deduplicated, and recovery is reported once after delivery acceptance.
    Verify a fresh export through a due run or a new one-shot request. Check
    `sync_success` and the updated last success time. If the run publishes a
    change, verify the resulting CSV commit.
+
+If publication is interrupted after either tag appears, check both digests
+and the saved native ARM64 test and startup results for the reviewed commit.
+When both tags match and the evidence passed, record the digest and continue
+with that image. For incomplete or mismatched publication, choose a new
+unused version and repeat the release from step 1. Preserve existing tags.
 
 ## Evidence and rollback
 

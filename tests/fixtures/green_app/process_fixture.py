@@ -1,5 +1,6 @@
 """Local-only subprocess fixtures; never invoked by the deployed App."""
 import json
+import os
 from pathlib import Path
 import resource
 import signal
@@ -17,10 +18,18 @@ if mode == "memory":
         (directory / "result.json").write_text(json.dumps({"ok": False, "error": "MemoryError"}))
         sys.exit(1)
     sys.exit(2)
-if mode in ("successful_exit", "abnormal_exit"):
-    (directory / "result.json").write_text(json.dumps({"ok": True, "attempt_id": "fixture-attempt"}))
+result_exits = {"successful_exit": 0, "abnormal_exit": 2, "ordinary_error": 1,
+                "abnormal_error": 2, "signaled_error": -signal.SIGKILL}
+if mode in result_exits:
+    result = {"ok": mode in ("successful_exit", "abnormal_exit"), "attempt_id": "fixture-attempt"}
+    if not result["ok"]:
+        result["error"] = "ValueError"
+    (directory / "result.json").write_text(json.dumps(result))
     (directory / (mode + ".ready")).write_text("ready")
-    sys.exit(0 if mode == "successful_exit" else 2)
+    code = result_exits[mode]
+    if code < 0:
+        os.kill(os.getpid(), -code)
+    sys.exit(code)
 signal.signal(signal.SIGTERM, signal.SIG_IGN)
 if mode in ("parent", "orphan"):
     child = subprocess.Popen([sys.executable, __file__, "child", str(directory)])
