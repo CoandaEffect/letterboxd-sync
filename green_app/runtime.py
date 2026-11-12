@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from .core import (Baseline, Guard, StateStore, UTC, atomic_bytes, healthy,
@@ -29,6 +30,9 @@ class Worker:
         self.timer = None
         self.pending_result = None
         self.cleanup_verified = True
+        self.attempt_id = None
+        # The scraper can write result.json but cannot replace the coordinator's deadline evidence.
+        self.timeout_path = self.directory.parent / "worker-timeout.json"
 
     @staticmethod
     def environment(username):
@@ -112,13 +116,14 @@ class Worker:
         process = self.process
         return process.pid if process is not None else None
 
-    def start(self, reference, username):
+    def start(self, reference, username, attempt_id):
         if self.running:
             raise RuntimeError("worker_overlap_refused")
         if self.process is not None:
             self.stop()
         if not self.cleanup_verified:
             raise RuntimeError("worker_cleanup_unverified")
+        self.attempt_id = attempt_id
         self.pending_result = None
         for name in ("candidate.csv", "result.json"):
             (self.directory / name).unlink(missing_ok=True)
@@ -136,7 +141,7 @@ class Worker:
             identity = {"user": 65534, "group": 65534, "extra_groups": []}
         self.log = (self.directory / "worker.log").open("wb")
         self.process = subprocess.Popen(
-            [sys.executable, "-m", "green_app.worker", str(self.directory), username],
+            [sys.executable, "-m", "green_app.worker", str(self.directory), username, attempt_id],
             env=self.environment(username), stdin=subprocess.DEVNULL, stdout=self.log,
             stderr=subprocess.STDOUT, start_new_session=True, close_fds=True, **identity)
         self.started = time.monotonic()
@@ -148,7 +153,12 @@ class Worker:
         with self.lock:
             if self.process is process:
                 self.pending_result = {"ok": False, "error": "worker_wall_timeout"}
-                self.stop()
+                try:
+                    if self.attempt_id:
+                        record = {"attempt_id": self.attempt_id, "error": "worker_wall_timeout"}
+                        atomic_bytes(self.timeout_path, json.dumps(record).encode())
+                finally:
+                    self.stop()
 
     def stop(self):
         with self.lock:
@@ -191,29 +201,50 @@ class Worker:
             return result or self.read_result(code, interrupted=code in (-signal.SIGTERM, -signal.SIGKILL))
 
     def _completed(self):
+        if self.process is not None and time.monotonic() - self.started >= 600:
+            self.deadline(self.process)
         if self.pending_result is not None:
             result, self.pending_result = self.pending_result, None
             return result
-        if self.process is None:
+        if self.process is None or self.running:
             return None
-        timeout = time.monotonic() - self.started >= 600
-        if self.running and not timeout:
-            return None
-        code = self.stop()
-        if timeout:
-            return {"ok": False, "error": "worker_wall_timeout"}
-        return self.read_result(code)
+        return self.read_result(self.stop())
 
-    def read_result(self, code, interrupted=False):
+    def read_attempt_result(self, attempt_id):
         try:
             result = json.loads((self.directory / "result.json").read_text())
-            if not isinstance(result, dict):
-                raise ValueError("worker_result_not_object")
-            if code != 0:
-                result["ok"] = False
-            return result
         except (OSError, ValueError):
+            return None
+        if (not isinstance(result, dict) or type(result.get("ok")) is not bool
+                or result.get("attempt_id") != attempt_id
+                or not result["ok"] and not isinstance(result.get("error"), str)):
+            return None
+        result.pop("attempt_id", None)
+        return result
+
+    def read_result(self, code, interrupted=False):
+        result = self.read_attempt_result(self.attempt_id)
+        if result is None:
             return None if interrupted else {"ok": False, "error": "worker_resource_or_process_failure"}
+        if code != 0:
+            result["ok"] = False
+        return result
+
+    def recovered_result(self, attempt_id):
+        if not isinstance(attempt_id, str) or not attempt_id:
+            return None
+        try:
+            record = json.loads(self.timeout_path.read_text())
+        except FileNotFoundError:
+            return self.read_attempt_result(attempt_id)
+        except (OSError, ValueError):
+            record = None
+        if (not isinstance(record, dict) or not isinstance(record.get("attempt_id"), str)
+                or not record["attempt_id"] or record.get("error") != "worker_wall_timeout"):
+            return {"ok": False, "error": "worker_timeout_record_unreadable"}
+        if record["attempt_id"] == attempt_id:
+            return {"ok": False, "error": record["error"]}
+        return self.read_attempt_result(attempt_id)
 
 
 class Coordinator:
@@ -227,9 +258,17 @@ class Coordinator:
         cleanup_pending = self.state.get("worker_cleanup_verified") is False
         if self.state["phase"] == "syncing" or self.state.get("worker_inflight") or cleanup_pending:
             safe = self.worker.recover(self.state.get("worker_identity"), self.state.get("worker_context"))
-            code = "worker_interrupted" if safe else "worker_cleanup_unverified"
+            result = self.worker.recovered_result(self.state.get("worker_attempt_id")) if safe else None
+            failure = self.worker_safety_failure(result)
+            if failure:
+                self.state["worker_result"] = result
+            code = failure or ("worker_interrupted" if safe else "worker_cleanup_unverified")
             prior = self.state.get("pause")
-            reason = prior if prior and (safe or prior not in RECOVERABLE_PAUSES) else code
+            reason = code
+            if prior and prior not in RECOVERABLE_PAUSES:
+                reason = code if prior == "worker_cleanup_unverified" and failure else prior
+            elif prior and safe and not failure:
+                reason = prior
             if reason != prior or cleanup_pending:
                 self.state["pause_resume_nonce"] = config.resume_nonce
             self.state.update(phase="paused", current_incident=reason, pause=reason,
@@ -238,7 +277,7 @@ class Coordinator:
             now = datetime.now(UTC)
             if not safe or reason == code:
                 self.incident(code, now)
-            elif cleanup_pending:
+            if cleanup_pending and safe and reason != "worker_cleanup_unverified":
                 self.recover("worker_cleanup_unverified", now)
             self.store.save(self.state)
         self.update_incident_state()
@@ -395,6 +434,10 @@ class Coordinator:
         self.recovery_samples.clear()
         self.guard.counts.clear()
         self.recover(reason, now)
+        if reason != "monitoring_missing":
+            self.recover("monitoring_missing", now)
+        if reason != "worker_interrupted" and cleanup is True:
+            self.recover("worker_interrupted", now)
         self.update_incident_state()
         self.event("explicit_resume" if explicit else "automatic_resume", now, reason=reason)
 
@@ -439,11 +482,12 @@ class Coordinator:
         try:
             reference, sha = self.github.fetch_export()
             validate_csv(reference, reference)
+            attempt_id = uuid4().hex
             self.state.update(reference_sha=sha, phase="syncing", worker_inflight=True,
-                              worker_identity=None, worker_context=self.worker.context(),
+                              worker_attempt_id=attempt_id, worker_identity=None, worker_context=self.worker.context(),
                               worker_cleanup_verified=False)
             self.store.save(self.state)
-            self.worker.start(reference, self.config.username)
+            self.worker.start(reference, self.config.username, attempt_id)
             self.state["worker_identity"] = self.worker.identity()
             self.store.save(self.state)
             self.event("sync_started", now)
@@ -491,7 +535,7 @@ class Coordinator:
         error = result.get("error") if result and not result.get("ok") else None
         if error == "MemoryError":
             return "worker_memory_failure"
-        if error in ("worker_resource_or_process_failure", "worker_wall_timeout"):
+        if error in ("worker_resource_or_process_failure", "worker_wall_timeout", "worker_timeout_record_unreadable"):
             return error
         return None
 
